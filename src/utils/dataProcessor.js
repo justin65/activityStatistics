@@ -2,6 +2,156 @@ import { getMonth, getYear, formatMonth } from './dateParser.js';
 import { normalizeName } from './nameAliases.js';
 
 /**
+ * 解析名字中的日期格式，提取真實名字和計算天數
+ * 支援格式：
+ * - 建宇(8/23) -> { name: '建宇', days: 1 }
+ * - 建宇(21-22) -> { name: '建宇', days: 2 }（需要活動日期來確定月份）
+ * - 建宇(7/22-23) -> { name: '建宇', days: 2 }
+ * - 建宇(6/30-7/1) -> { name: '建宇', days: 2 }
+ * @param {string} nameWithDate - 包含日期的名字
+ * @param {Date} activityDate - 活動日期（用於處理只有日期沒有月份的情況）
+ * @returns {Object} { name: string, days: number, error?: string }
+ */
+function parseNameWithDate(nameWithDate, activityDate = null) {
+  if (!nameWithDate || typeof nameWithDate !== 'string') {
+    return { name: nameWithDate || '', days: 0, error: '名字為空或格式錯誤' };
+  }
+
+  const trimmed = nameWithDate.trim();
+  
+  // 檢查是否有括號（支援中文和英文括號）
+  const bracketMatch = trimmed.match(/^(.+?)[（(](.+?)[）)]$/);
+  
+  if (!bracketMatch) {
+    // 沒有括號，直接返回原名字
+    return { name: trimmed, days: 0 };
+  }
+
+  const name = bracketMatch[1].trim();
+  const dateStr = bracketMatch[2].trim();
+
+  if (!name) {
+    return { name: '', days: 0, error: `無法提取名字: ${trimmed}` };
+  }
+
+  // 預設年份為 2025（與 dateParser 一致）
+  const defaultYear = 2025;
+  
+  // 從活動日期獲取月份（如果有的話）
+  let defaultMonth = null;
+  if (activityDate && activityDate instanceof Date && !isNaN(activityDate.getTime())) {
+    defaultMonth = activityDate.getMonth() + 1; // getMonth() 返回 0-11
+  }
+
+  try {
+    // 處理日期範圍格式
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      if (parts.length === 2) {
+        const startPart = parts[0].trim();
+        const endPart = parts[1].trim();
+
+        // 解析開始日期
+        let startMonth, startDay;
+        if (startPart.includes('/')) {
+          const startMatch = startPart.match(/^(\d{1,2})\/(\d{1,2})$/);
+          if (!startMatch) {
+            return { name, days: 0, error: `無法解析開始日期: ${startPart}` };
+          }
+          startMonth = parseInt(startMatch[1], 10);
+          startDay = parseInt(startMatch[2], 10);
+        } else {
+          // 只有日期，沒有月份（例如：21-22）
+          // 從活動日期獲取月份
+          if (defaultMonth === null) {
+            return { name, days: 0, error: `日期格式需要包含月份或活動日期: ${dateStr}` };
+          }
+          startMonth = defaultMonth;
+          const day = parseInt(startPart, 10);
+          if (isNaN(day) || day < 1 || day > 31) {
+            return { name, days: 0, error: `無法解析開始日期: ${startPart}` };
+          }
+          startDay = day;
+        }
+
+        // 解析結束日期
+        let endMonth, endDay;
+        if (endPart.includes('/')) {
+          const endMatch = endPart.match(/^(\d{1,2})\/(\d{1,2})$/);
+          if (!endMatch) {
+            return { name, days: 0, error: `無法解析結束日期: ${endPart}` };
+          }
+          endMonth = parseInt(endMatch[1], 10);
+          endDay = parseInt(endMatch[2], 10);
+        } else {
+          // 只有日期，沒有月份（例如：22-23）
+          // 假設與開始日期同一個月（如果開始日期也沒有月份，則使用活動日期的月份）
+          if (startPart.includes('/')) {
+            endMonth = startMonth;
+          } else {
+            endMonth = defaultMonth || startMonth;
+          }
+          const day = parseInt(endPart, 10);
+          if (isNaN(day) || day < 1 || day > 31) {
+            return { name, days: 0, error: `無法解析結束日期: ${endPart}` };
+          }
+          endDay = day;
+        }
+
+        // 驗證日期有效性
+        if (startMonth < 1 || startMonth > 12 || startDay < 1 || startDay > 31 ||
+            endMonth < 1 || endMonth > 12 || endDay < 1 || endDay > 31) {
+          return { name, days: 0, error: `日期無效: ${dateStr}` };
+        }
+
+        // 計算天數
+        const startDate = new Date(defaultYear, startMonth - 1, startDay);
+        const endDate = new Date(defaultYear, endMonth - 1, endDay);
+
+        // 驗證日期是否正確
+        if (startDate.getMonth() !== startMonth - 1 || startDate.getDate() !== startDay ||
+            endDate.getMonth() !== endMonth - 1 || endDate.getDate() !== endDay) {
+          return { name, days: 0, error: `日期無效: ${dateStr}` };
+        }
+
+        // 計算天數差（包含開始和結束日期）
+        const diffTime = endDate.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        const days = diffDays + 1; // 包含開始和結束日期
+
+        if (days < 1) {
+          return { name, days: 0, error: `日期範圍無效: ${dateStr}` };
+        }
+
+        return { name, days };
+      }
+    } else {
+      // 單一日期格式（例如：8/23）
+      const singleMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})$/);
+      if (!singleMatch) {
+        return { name, days: 0, error: `無法解析日期格式: ${dateStr}` };
+      }
+
+      const month = parseInt(singleMatch[1], 10);
+      const day = parseInt(singleMatch[2], 10);
+
+      if (month < 1 || month > 12 || day < 1 || day > 31) {
+        return { name, days: 0, error: `日期無效: ${dateStr}` };
+      }
+
+      const date = new Date(defaultYear, month - 1, day);
+      if (date.getMonth() !== month - 1 || date.getDate() !== day) {
+        return { name, days: 0, error: `日期無效: ${dateStr}` };
+      }
+
+      return { name, days: 1 };
+    }
+  } catch (error) {
+    return { name, days: 0, error: `解析日期時發生錯誤: ${error.message}` };
+  }
+}
+
+/**
  * 過濾掉取消的活動
  * @param {Array} data - 原始資料
  * @returns {Array} 過濾後的資料
@@ -161,22 +311,45 @@ export function calculateMonthlyCityDays(data) {
 
 /**
  * 計算按人名的活動參與次數（使用別名映射合併）
+ * 處理名字後面有日期的情況（例如：建宇(8/23)）
  * @param {Array} data - 過濾後的資料
  * @returns {Array} 統計資料 [{ name: string, count: number }]
  */
 export function calculateParticipantCount(data) {
   const stats = {};
+  const errors = [];
   
   data.forEach(record => {
     record.participants.forEach(name => {
+      // 解析名字中的日期（傳入活動日期以處理只有日期沒有月份的情況）
+      const parsed = parseNameWithDate(name, record.date);
+      
+      // 如果有錯誤，記錄錯誤訊息
+      if (parsed.error) {
+        errors.push(`第 ${record.rowNumber} 行，參與人員 "${name}": ${parsed.error}`);
+      }
+      
+      // 提取真實名字
+      const realName = parsed.name;
+      if (!realName) {
+        return; // 跳過無法提取名字的情況
+      }
+      
       // 使用別名映射將人名轉換為標準名稱
-      const normalizedName = normalizeName(name);
+      const normalizedName = normalizeName(realName);
+      
       if (!stats[normalizedName]) {
         stats[normalizedName] = 0;
       }
       stats[normalizedName]++;
     });
   });
+  
+  // 如果有錯誤，打印錯誤訊息
+  if (errors.length > 0) {
+    console.error('參與人員次數統計錯誤：');
+    errors.forEach(error => console.error('  -', error));
+  }
   
   return Object.entries(stats)
     .map(([name, count]) => ({ name, count }))
@@ -185,23 +358,57 @@ export function calculateParticipantCount(data) {
 
 /**
  * 計算按人名的活動參與時數（使用別名映射合併）
+ * 處理名字後面有日期的情況（例如：建宇(8/23)）
+ * 如果名字中有日期，時數 = 天數 × 8小時；否則使用記錄中的時數
  * @param {Array} data - 過濾後的資料
  * @returns {Array} 統計資料 [{ name: string, hours: number }]
  */
 export function calculateParticipantHours(data) {
   const stats = {};
+  const errors = [];
   
   data.forEach(record => {
-    const hours = record.hours || 0;
+    const recordHours = record.hours || 0;
     record.participants.forEach(name => {
+      // 解析名字中的日期（傳入活動日期以處理只有日期沒有月份的情況）
+      const parsed = parseNameWithDate(name, record.date);
+      
+      // 如果有錯誤，記錄錯誤訊息
+      if (parsed.error) {
+        errors.push(`第 ${record.rowNumber} 行，參與人員 "${name}": ${parsed.error}`);
+      }
+      
+      // 提取真實名字
+      const realName = parsed.name;
+      if (!realName) {
+        return; // 跳過無法提取名字的情況
+      }
+      
       // 使用別名映射將人名轉換為標準名稱
-      const normalizedName = normalizeName(name);
+      const normalizedName = normalizeName(realName);
+      
+      // 計算時數
+      let hours = 0;
+      if (parsed.days > 0) {
+        // 如果名字中有日期，時數 = 天數 × 8小時
+        hours = parsed.days * 8;
+      } else {
+        // 否則使用記錄中的時數
+        hours = recordHours;
+      }
+      
       if (!stats[normalizedName]) {
         stats[normalizedName] = 0;
       }
       stats[normalizedName] += hours;
     });
   });
+  
+  // 如果有錯誤，打印錯誤訊息
+  if (errors.length > 0) {
+    console.error('參與人員時數統計錯誤：');
+    errors.forEach(error => console.error('  -', error));
+  }
   
   return Object.entries(stats)
     .map(([name, hours]) => ({ name, hours }))

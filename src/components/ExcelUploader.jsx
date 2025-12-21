@@ -21,9 +21,6 @@ export default function ExcelUploader({ onFileUpload, isLoading }) {
       <Typography variant="h6" gutterBottom>
         上傳 Excel 檔案
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        請上傳「手作步道活動助教人力需求表.xlsx」檔案，系統將讀取「2025」工作表的資料
-      </Typography>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <input
           ref={fileInputRef}

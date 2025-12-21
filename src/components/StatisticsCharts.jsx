@@ -15,6 +15,8 @@ import {
   calculateMonthlyActivityTypeDays,
   calculateMonthlyCityCount,
   calculateMonthlyCityDays,
+  calculateMonthlyRegionCount,
+  calculateMonthlyRegionDays,
   calculateParticipantCount,
   calculateParticipantHours,
   getActivityTypes,
@@ -35,6 +37,8 @@ export default function StatisticsCharts({ data }) {
   const monthlyActivityTypeDays = calculateMonthlyActivityTypeDays(data);
   const monthlyCityCount = calculateMonthlyCityCount(data);
   const monthlyCityDays = calculateMonthlyCityDays(data);
+  const monthlyRegionCount = calculateMonthlyRegionCount(data);
+  const monthlyRegionDays = calculateMonthlyRegionDays(data);
   const participantCount = calculateParticipantCount(data);
   const participantHours = calculateParticipantHours(data);
 
@@ -94,10 +98,15 @@ export default function StatisticsCharts({ data }) {
     });
   };
 
+  // 地區順序（北中南東）
+  const regions = ['北部', '中部', '南部', '東部'];
+  
   const activityTypeCountData = formatStackedData(monthlyActivityTypeCount, activityTypes);
   const activityTypeDaysData = formatStackedData(monthlyActivityTypeDays, activityTypes);
   const cityCountData = formatStackedData(monthlyCityCount, cities);
   const cityDaysData = formatStackedData(monthlyCityDays, cities);
+  const regionCountData = formatStackedData(monthlyRegionCount, regions);
+  const regionDaysData = formatStackedData(monthlyRegionDays, regions);
 
   // 顏色配置
   const getColorPalette = (count) => {
@@ -286,11 +295,85 @@ export default function StatisticsCharts({ data }) {
         </Paper>
       </Grid>
 
-      {/* 圖表 5: 人名參與活動次數 */}
+      {/* 圖表 5: 月份活動次數（Stack：地區） */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            5. 參與人員活動次數統計
+            5. 各月份活動次數統計（依地區）
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <BarChart data={regionCountData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="month"
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {regions.map((region, index) => {
+                  const regionColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+                  return (
+                    <Bar
+                      key={region}
+                      dataKey={region}
+                      stackId="a"
+                      fill={regionColors[index % regionColors.length]}
+                    />
+                  );
+                })}
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 圖表 6: 月份活動天數（Stack：地區） */}
+      <Grid item xs={12}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            6. 各月份活動天數統計（依地區）
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <BarChart data={regionDaysData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="month"
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                  interval={0}
+                />
+                <YAxis />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {regions.map((region, index) => {
+                  const regionColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+                  return (
+                    <Bar
+                      key={region}
+                      dataKey={region}
+                      stackId="a"
+                      fill={regionColors[index % regionColors.length]}
+                    />
+                  );
+                })}
+              </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 圖表 7: 人名參與活動次數 */}
+      <Grid item xs={12}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            7. 參與人員活動次數統計
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>
@@ -315,11 +398,11 @@ export default function StatisticsCharts({ data }) {
         </Paper>
       </Grid>
 
-      {/* 圖表 6: 人名參與活動時數 */}
+      {/* 圖表 8: 人名參與活動時數 */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            6. 參與人員活動時數統計
+            8. 參與人員活動時數統計
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>

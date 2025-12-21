@@ -242,3 +242,102 @@ export function getCities(statsData) {
   return Array.from(cities).sort();
 }
 
+/**
+ * 縣市區域分類（北中南東）
+ */
+const cityRegions = {
+  // 北部
+  '台北市': '北部', '新北市': '北部', '桃園市': '北部', '新竹市': '北部', '新竹縣': '北部',
+  '基隆市': '北部', '宜蘭縣': '北部',
+  // 中部
+  '台中市': '中部', '苗栗縣': '中部', '彰化縣': '中部', '南投縣': '中部', '雲林縣': '中部',
+  // 南部
+  '高雄市': '南部', '台南市': '南部', '嘉義市': '南部', '嘉義縣': '南部', '屏東縣': '南部', '澎湖縣': '南部',
+  // 東部
+  '花蓮縣': '東部', '台東縣': '東部',
+};
+
+/**
+ * 將縣市轉換為地區
+ * @param {string} city - 縣市名稱
+ * @returns {string} 地區名稱（北部、中部、南部、東部、未分類）
+ */
+function getRegion(city) {
+  return cityRegions[city] || '未分類';
+}
+
+/**
+ * 計算按月份和地區的統計（次數）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料
+ */
+export function calculateMonthlyRegionCount(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const year = getYear(record.date);
+    const month = getMonth(record.date);
+    const key = `${year}-${month}`;
+    const monthLabel = formatMonth(year, month);
+    const city = record.city || '未分類';
+    const region = getRegion(city);
+    
+    if (!stats[key]) {
+      stats[key] = {
+        month: monthLabel,
+        year,
+        monthNum: month,
+      };
+    }
+    
+    if (!stats[key][region]) {
+      stats[key][region] = 0;
+    }
+    
+    stats[key][region]++;
+  });
+  
+  return Object.values(stats).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.monthNum - b.monthNum;
+  });
+}
+
+/**
+ * 計算按月份和地區的統計（天數）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料
+ */
+export function calculateMonthlyRegionDays(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const year = getYear(record.date);
+    const month = getMonth(record.date);
+    const key = `${year}-${month}`;
+    const monthLabel = formatMonth(year, month);
+    const city = record.city || '未分類';
+    const region = getRegion(city);
+    const days = record.days || 0;
+    
+    if (!stats[key]) {
+      stats[key] = {
+        month: monthLabel,
+        year,
+        monthNum: month,
+      };
+    }
+    
+    if (!stats[key][region]) {
+      stats[key][region] = 0;
+    }
+    
+    stats[key][region] += days;
+  });
+  
+  return Object.values(stats).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.monthNum - b.monthNum;
+  });
+}
+

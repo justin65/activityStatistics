@@ -3,32 +3,35 @@ import { parseDate } from './dateParser.js';
 
 /**
  * 解析服勤區欄位中的人名
+ * 支援多種分隔符：換行符、頓號（、）、英文逗號（,）、中文逗號（，）
  * @param {string|number} value - 服勤區欄位的值
  * @returns {string[]} 人名陣列
  */
 function parseParticipants(value) {
   if (!value) return [];
   
-  const str = String(value).trim();
+  let str = String(value).trim();
   if (!str) return [];
   
-  // 使用「、」作為主要分隔符
-  let names = str.split('、');
+  // 先處理換行符（可能是 \n 或 \r\n）
+  str = str.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   
-  // 如果沒有「、」，嘗試使用逗號
-  if (names.length === 1 && str.includes(',')) {
-    names = str.split(',');
-  }
+  let names = [];
   
-  // 如果還是只有一個，嘗試使用空格（多個空格）
-  if (names.length === 1 && str.includes(' ')) {
-    names = str.split(/\s+/);
-  }
+  // 使用正則表達式同時分割所有可能的分隔符
+  // 分隔符包括：換行符、頓號（、）、中文逗號（，）、英文逗號（,）
+  // 使用正則表達式來匹配這些分隔符
+  const separators = /[\n、，,]+/;
+  
+  // 先按所有分隔符分割
+  names = str.split(separators);
   
   // 清理每個名字（去除前後空格）
-  return names
+  names = names
     .map(name => name.trim())
     .filter(name => name.length > 0);
+  
+  return names;
 }
 
 /**

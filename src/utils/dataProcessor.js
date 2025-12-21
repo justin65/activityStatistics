@@ -1,4 +1,5 @@
 import { getMonth, getYear, formatMonth } from './dateParser.js';
+import { normalizeName } from './nameAliases.js';
 
 /**
  * 過濾掉取消的活動
@@ -159,7 +160,7 @@ export function calculateMonthlyCityDays(data) {
 }
 
 /**
- * 計算按人名的活動參與次數
+ * 計算按人名的活動參與次數（使用別名映射合併）
  * @param {Array} data - 過濾後的資料
  * @returns {Array} 統計資料 [{ name: string, count: number }]
  */
@@ -168,10 +169,12 @@ export function calculateParticipantCount(data) {
   
   data.forEach(record => {
     record.participants.forEach(name => {
-      if (!stats[name]) {
-        stats[name] = 0;
+      // 使用別名映射將人名轉換為標準名稱
+      const normalizedName = normalizeName(name);
+      if (!stats[normalizedName]) {
+        stats[normalizedName] = 0;
       }
-      stats[name]++;
+      stats[normalizedName]++;
     });
   });
   
@@ -181,7 +184,7 @@ export function calculateParticipantCount(data) {
 }
 
 /**
- * 計算按人名的活動參與時數
+ * 計算按人名的活動參與時數（使用別名映射合併）
  * @param {Array} data - 過濾後的資料
  * @returns {Array} 統計資料 [{ name: string, hours: number }]
  */
@@ -191,10 +194,12 @@ export function calculateParticipantHours(data) {
   data.forEach(record => {
     const hours = record.hours || 0;
     record.participants.forEach(name => {
-      if (!stats[name]) {
-        stats[name] = 0;
+      // 使用別名映射將人名轉換為標準名稱
+      const normalizedName = normalizeName(name);
+      if (!stats[normalizedName]) {
+        stats[normalizedName] = 0;
       }
-      stats[name] += hours;
+      stats[normalizedName] += hours;
     });
   });
   

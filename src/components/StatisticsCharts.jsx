@@ -159,6 +159,11 @@ export default function StatisticsCharts({ data }) {
   const activityTypeColors = getColorPalette(activityTypes.length);
   const cityColorMap = getCityColorMap(cities);
 
+  // 計算圓餅圖數據的總和
+  const calculateTotal = (data) => {
+    return data.reduce((sum, item) => sum + (item.value || 0), 0);
+  };
+
   // 自訂 Tooltip
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -256,7 +261,7 @@ export default function StatisticsCharts({ data }) {
       <Grid item xs={12} md={6}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            3. 依活動類型統計次數
+            3. 依活動類型統計次數（總次數：{calculateTotal(activityTypeTotalCount)}）
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>
@@ -288,7 +293,7 @@ export default function StatisticsCharts({ data }) {
       <Grid item xs={12} md={6}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            4. 依活動類型統計天數
+            4. 依活動類型統計天數（總天數：{calculateTotal(activityTypeTotalDays)}）
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>
@@ -388,7 +393,7 @@ export default function StatisticsCharts({ data }) {
       <Grid item xs={12} md={6}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            7. 依縣市統計次數
+            7. 依縣市統計次數（總次數：{calculateTotal(cityTotalCount)}）
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>
@@ -421,7 +426,7 @@ export default function StatisticsCharts({ data }) {
       <Grid item xs={12} md={6}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            8. 依縣市統計天數
+            8. 依縣市統計天數（總天數：{calculateTotal(cityTotalDays)}）
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>
@@ -530,7 +535,7 @@ export default function StatisticsCharts({ data }) {
       <Grid item xs={12} md={6}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            11. 依地區統計次數
+            11. 依地區統計次數（總次數：{calculateTotal(regionTotalCount)}）
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>
@@ -563,7 +568,7 @@ export default function StatisticsCharts({ data }) {
       <Grid item xs={12} md={6}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            12. 依地區統計天數
+            12. 依地區統計天數（總天數：{calculateTotal(regionTotalDays)}）
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2 }}>
             <ResponsiveContainer>

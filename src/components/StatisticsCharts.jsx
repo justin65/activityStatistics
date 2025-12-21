@@ -146,6 +146,16 @@ export default function StatisticsCharts({ data }) {
     return colors.slice(0, count);
   };
 
+  // 為活動類型建立顏色映射，確保每個活動類型都有唯一顏色
+  const getActivityTypeColorMap = (typeList) => {
+    const colorPalette = getColorPalette(typeList.length);
+    const colorMap = {};
+    typeList.forEach((type, index) => {
+      colorMap[type] = colorPalette[index];
+    });
+    return colorMap;
+  };
+
   // 為縣市建立顏色映射，確保每個縣市都有唯一顏色
   const getCityColorMap = (cityList) => {
     const colorPalette = getColorPalette(cityList.length);
@@ -156,7 +166,7 @@ export default function StatisticsCharts({ data }) {
     return colorMap;
   };
 
-  const activityTypeColors = getColorPalette(activityTypes.length);
+  const activityTypeColorMap = getActivityTypeColorMap(activityTypes);
   const cityColorMap = getCityColorMap(cities);
 
   // 計算圓餅圖數據的總和
@@ -209,12 +219,12 @@ export default function StatisticsCharts({ data }) {
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                {activityTypes.map((type, index) => (
+                {activityTypes.map((type) => (
                   <Bar
                     key={type}
                     dataKey={type}
                     stackId="a"
-                    fill={activityTypeColors[index % activityTypeColors.length]}
+                    fill={activityTypeColorMap[type]}
                   />
                 ))}
               </BarChart>
@@ -243,12 +253,12 @@ export default function StatisticsCharts({ data }) {
                 <YAxis />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                {activityTypes.map((type, index) => (
+                {activityTypes.map((type) => (
                   <Bar
                     key={type}
                     dataKey={type}
                     stackId="a"
-                    fill={activityTypeColors[index % activityTypeColors.length]}
+                    fill={activityTypeColorMap[type]}
                   />
                 ))}
               </BarChart>
@@ -276,9 +286,9 @@ export default function StatisticsCharts({ data }) {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {activityTypeTotalCount.map((entry, index) => {
-                    const colors = getColorPalette(activityTypeTotalCount.length);
-                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  {activityTypeTotalCount.map((entry) => {
+                    const color = activityTypeColorMap[entry.name] || '#cccccc';
+                    return <Cell key={`cell-${entry.name}`} fill={color} />;
                   })}
                 </Pie>
                 <Tooltip />
@@ -308,9 +318,9 @@ export default function StatisticsCharts({ data }) {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {activityTypeTotalDays.map((entry, index) => {
-                    const colors = getColorPalette(activityTypeTotalDays.length);
-                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  {activityTypeTotalDays.map((entry) => {
+                    const color = activityTypeColorMap[entry.name] || '#cccccc';
+                    return <Cell key={`cell-${entry.name}`} fill={color} />;
                   })}
                 </Pie>
                 <Tooltip />

@@ -269,6 +269,36 @@ export function calculateActivityTypeTotalDays(data) {
 }
 
 /**
+ * 縣市區域分類（北中南東）- 用於排序
+ */
+const cityRegionsForSort = {
+  // 北部
+  '台北市': 1, '新北市': 1, '桃園市': 1, '新竹市': 1, '新竹縣': 1,
+  '基隆市': 1, '宜蘭縣': 1,
+  // 中部
+  '台中市': 2, '苗栗縣': 2, '彰化縣': 2, '南投縣': 2, '雲林縣': 2,
+  // 南部
+  '高雄市': 3, '台南市': 3, '嘉義市': 3, '嘉義縣': 3, '屏東縣': 3, '澎湖縣': 3,
+  // 東部
+  '花蓮縣': 4, '台東縣': 4,
+};
+
+/**
+ * 區域內排序順序（如果同區域有多個縣市）
+ */
+const cityOrderForSort = {
+  // 北部
+  '台北市': 1, '新北市': 2, '桃園市': 3, '新竹市': 4, '新竹縣': 5,
+  '基隆市': 6, '宜蘭縣': 7,
+  // 中部
+  '台中市': 1, '苗栗縣': 2, '彰化縣': 3, '南投縣': 4, '雲林縣': 5,
+  // 南部
+  '高雄市': 1, '台南市': 2, '嘉義市': 3, '嘉義縣': 4, '屏東縣': 5, '澎湖縣': 6,
+  // 東部
+  '花蓮縣': 1, '台東縣': 2,
+};
+
+/**
  * 計算依縣市的總次數統計（用於圓餅圖）
  * @param {Array} data - 過濾後的資料
  * @returns {Array} 統計資料 [{ name: string, value: number }]
@@ -284,9 +314,22 @@ export function calculateCityTotalCount(data) {
     stats[city]++;
   });
   
+  // 按照北中南東的順序排序，未分類放在最後
   return Object.entries(stats)
     .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+    .sort((a, b) => {
+      const regionA = cityRegionsForSort[a.name] || 99; // 未定義的縣市（包括未分類）放在最後
+      const regionB = cityRegionsForSort[b.name] || 99;
+      
+      if (regionA !== regionB) {
+        return regionA - regionB;
+      }
+      
+      // 同區域內按順序排序
+      const orderA = cityOrderForSort[a.name] || 999;
+      const orderB = cityOrderForSort[b.name] || 999;
+      return orderA - orderB;
+    });
 }
 
 /**
@@ -306,9 +349,22 @@ export function calculateCityTotalDays(data) {
     stats[city] += days;
   });
   
+  // 按照北中南東的順序排序，未分類放在最後
   return Object.entries(stats)
     .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+    .sort((a, b) => {
+      const regionA = cityRegionsForSort[a.name] || 99; // 未定義的縣市（包括未分類）放在最後
+      const regionB = cityRegionsForSort[b.name] || 99;
+      
+      if (regionA !== regionB) {
+        return regionA - regionB;
+      }
+      
+      // 同區域內按順序排序
+      const orderA = cityOrderForSort[a.name] || 999;
+      const orderB = cityOrderForSort[b.name] || 999;
+      return orderA - orderB;
+    });
 }
 
 /**

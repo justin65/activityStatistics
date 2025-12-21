@@ -30,7 +30,11 @@ export function parseDate(dateValue) {
   if (!dateStr) return null;
   
   // 移除括號及其內容（星期資訊）
-  dateStr = dateStr.replace(/\([^)]*\)/g, '').trim();
+  // 同時處理中文括號（全形）和英文括號（半形）
+  dateStr = dateStr
+    .replace(/\([^)]*\)/g, '')  // 移除英文括號及其內容
+    .replace(/（[^）]*）/g, '')  // 移除中文括號及其內容
+    .trim();
   
   // 預設年份為 2025
   const defaultYear = 2025;

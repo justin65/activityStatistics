@@ -226,6 +226,145 @@ export function getActivityTypes(statsData) {
 }
 
 /**
+ * 計算依活動類型的總次數統計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateActivityTypeTotalCount(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const activityType = record.activityType || '未分類';
+    if (!stats[activityType]) {
+      stats[activityType] = 0;
+    }
+    stats[activityType]++;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * 計算依活動類型的總天數統計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateActivityTypeTotalDays(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const activityType = record.activityType || '未分類';
+    const days = record.days || 0;
+    if (!stats[activityType]) {
+      stats[activityType] = 0;
+    }
+    stats[activityType] += days;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * 計算依縣市的總次數統計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateCityTotalCount(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    if (!stats[city]) {
+      stats[city] = 0;
+    }
+    stats[city]++;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * 計算依縣市的總天數統計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateCityTotalDays(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    const days = record.days || 0;
+    if (!stats[city]) {
+      stats[city] = 0;
+    }
+    stats[city] += days;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * 計算依地區的總次數統計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateRegionTotalCount(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    const region = getRegion(city);
+    if (!stats[region]) {
+      stats[region] = 0;
+    }
+    stats[region]++;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => {
+      // 按照北中南東的順序排序
+      const order = { '北部': 1, '中部': 2, '南部': 3, '東部': 4, '未分類': 5 };
+      return (order[a.name] || 99) - (order[b.name] || 99);
+    });
+}
+
+/**
+ * 計算依地區的總天數統計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateRegionTotalDays(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    const region = getRegion(city);
+    const days = record.days || 0;
+    if (!stats[region]) {
+      stats[region] = 0;
+    }
+    stats[region] += days;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => {
+      // 按照北中南東的順序排序
+      const order = { '北部': 1, '中部': 2, '南部': 3, '東部': 4, '未分類': 5 };
+      return (order[a.name] || 99) - (order[b.name] || 99);
+    });
+}
+
+/**
  * 取得所有縣市（用於圖表）
  * @param {Array} statsData - 統計資料
  * @returns {Array} 縣市陣列

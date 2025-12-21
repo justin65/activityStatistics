@@ -9,6 +9,9 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 import {
   calculateMonthlyActivityTypeCount,
@@ -17,6 +20,12 @@ import {
   calculateMonthlyCityDays,
   calculateMonthlyRegionCount,
   calculateMonthlyRegionDays,
+  calculateActivityTypeTotalCount,
+  calculateActivityTypeTotalDays,
+  calculateCityTotalCount,
+  calculateCityTotalDays,
+  calculateRegionTotalCount,
+  calculateRegionTotalDays,
   calculateParticipantCount,
   calculateParticipantHours,
   getActivityTypes,
@@ -39,6 +48,12 @@ export default function StatisticsCharts({ data }) {
   const monthlyCityDays = calculateMonthlyCityDays(data);
   const monthlyRegionCount = calculateMonthlyRegionCount(data);
   const monthlyRegionDays = calculateMonthlyRegionDays(data);
+  const activityTypeTotalCount = calculateActivityTypeTotalCount(data);
+  const activityTypeTotalDays = calculateActivityTypeTotalDays(data);
+  const cityTotalCount = calculateCityTotalCount(data);
+  const cityTotalDays = calculateCityTotalDays(data);
+  const regionTotalCount = calculateRegionTotalCount(data);
+  const regionTotalDays = calculateRegionTotalDays(data);
   const participantCount = calculateParticipantCount(data);
   const participantHours = calculateParticipantHours(data);
 
@@ -227,6 +242,70 @@ export default function StatisticsCharts({ data }) {
         </Paper>
       </Grid>
 
+      {/* 圓餅圖：依活動類型統計次數 */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            依活動類型統計次數
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={activityTypeTotalCount}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {activityTypeTotalCount.map((entry, index) => {
+                    const colors = getColorPalette(activityTypeTotalCount.length);
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 圓餅圖：依活動類型統計天數 */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            依活動類型統計天數
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={activityTypeTotalDays}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {activityTypeTotalDays.map((entry, index) => {
+                    const colors = getColorPalette(activityTypeTotalDays.length);
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
       {/* 圖表 3: 月份活動次數（Stack：縣市） */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
@@ -290,6 +369,70 @@ export default function StatisticsCharts({ data }) {
                   />
                 ))}
               </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 圓餅圖：依縣市統計次數 */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            依縣市統計次數
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={cityTotalCount}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {cityTotalCount.map((entry, index) => {
+                    const colors = getColorPalette(cityTotalCount.length);
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 圓餅圖：依縣市統計天數 */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            依縣市統計天數
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={cityTotalDays}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {cityTotalDays.map((entry, index) => {
+                    const colors = getColorPalette(cityTotalDays.length);
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </Box>
         </Paper>
@@ -364,6 +507,70 @@ export default function StatisticsCharts({ data }) {
                   );
                 })}
               </BarChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 圓餅圖：依地區統計次數 */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            依地區統計次數
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={regionTotalCount}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {regionTotalCount.map((entry, index) => {
+                    const regionColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+                    return <Cell key={`cell-${index}`} fill={regionColors[index % regionColors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 圓餅圖：依地區統計天數 */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={2} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            依地區統計天數
+          </Typography>
+          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={regionTotalDays}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {regionTotalDays.map((entry, index) => {
+                    const regionColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+                    return <Cell key={`cell-${index}`} fill={regionColors[index % regionColors.length]} />;
+                  })}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
             </ResponsiveContainer>
           </Box>
         </Paper>

@@ -320,7 +320,19 @@ export function calculateParticipantCount(data) {
   const errors = [];
   
   data.forEach(record => {
-    record.participants.forEach(name => {
+    record.participants.forEach(participant => {
+      // 處理新格式：participant 可能是 { name: string, days: number } 或 string
+      let name, daysFromPrefix = 0;
+      
+      if (typeof participant === 'object' && participant.name) {
+        // 新格式：日期前綴格式
+        name = participant.name;
+        daysFromPrefix = participant.days || 0;
+      } else {
+        // 舊格式：純字串
+        name = participant;
+      }
+      
       // 解析名字中的日期（傳入活動日期以處理只有日期沒有月份的情況）
       const parsed = parseNameWithDate(name, record.date);
       
@@ -338,6 +350,8 @@ export function calculateParticipantCount(data) {
       // 使用別名映射將人名轉換為標準名稱
       const normalizedName = normalizeName(realName);
       
+      // 次數統計：每個活動記錄中的每個參與人員都只算1次
+      // 日期信息只用於計算時數，不影響次數統計
       if (!stats[normalizedName]) {
         stats[normalizedName] = 0;
       }
@@ -369,7 +383,19 @@ export function calculateParticipantHours(data) {
   
   data.forEach(record => {
     const recordHours = record.hours || 0;
-    record.participants.forEach(name => {
+    record.participants.forEach(participant => {
+      // 處理新格式：participant 可能是 { name: string, days: number } 或 string
+      let name, daysFromPrefix = 0;
+      
+      if (typeof participant === 'object' && participant.name) {
+        // 新格式：日期前綴格式（例如：11/29-30：盈瑩）
+        name = participant.name;
+        daysFromPrefix = participant.days || 0;
+      } else {
+        // 舊格式：純字串（可能包含名字後面的日期，例如：盈瑩(11/29)）
+        name = participant;
+      }
+      
       // 解析名字中的日期（傳入活動日期以處理只有日期沒有月份的情況）
       const parsed = parseNameWithDate(name, record.date);
       
@@ -389,8 +415,12 @@ export function calculateParticipantHours(data) {
       
       // 計算時數
       let hours = 0;
-      if (parsed.days > 0) {
-        // 如果名字中有日期，時數 = 天數 × 8小時
+      
+      // 優先使用日期前綴的天數（新格式）
+      if (daysFromPrefix > 0) {
+        hours = daysFromPrefix * 8;
+      } else if (parsed.days > 0) {
+        // 其次使用名字中解析出的日期（舊格式：名字後面的日期）
         hours = parsed.days * 8;
       } else {
         // 否則使用記錄中的時數

@@ -662,7 +662,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            13. 參與人員活動次數統計
+            13. 出勤活動次數統計
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
             <ResponsiveContainer>
@@ -727,7 +727,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            14. 參與人員活動時數統計
+            14. 出勤活動時數統計
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
             <ResponsiveContainer>
@@ -859,7 +859,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
           <Grid item xs={12}>
             <Paper elevation={2} sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
-                15. 志工參與時數統計（依參與內容）
+                15. 回報時數統計
               </Typography>
               {/* 上半部分 */}
               <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
@@ -917,6 +917,151 @@ export default function StatisticsCharts({ data, hourLogData }) {
                           fill={contentColorMap[content]}
                         />
                       ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        );
+      })()}
+
+      {/* 圖表 16: 手作時數 - 步道實作帶領時數（差值統計） */}
+      {data && data.length > 0 && hourLogData && hourLogData.data && hourLogData.data.length > 0 && (() => {
+        // 計算差值：圖表14中的「手作」時數 - 圖表15中的「步道實作帶領」時數
+        const differenceData = [];
+        
+        // 建立人名到時數的映射
+        const participantHoursMap = {};
+        participantHours.forEach(item => {
+          participantHoursMap[item.name] = item['手作'] || 0;
+        });
+        
+        const hourLogMap = {};
+        hourLogData.data.forEach(item => {
+          hourLogMap[item.name] = item['步道實作帶領'] || 0;
+        });
+        
+        // 收集所有人名（兩個數據源的聯集）
+        const allNames = new Set([
+          ...participantHours.map(item => item.name),
+          ...hourLogData.data.map(item => item.name)
+        ]);
+        
+        // 計算每個人的差值
+        allNames.forEach(name => {
+          const handcraftHours = participantHoursMap[name] || 0;
+          const trailLeadingHours = hourLogMap[name] || 0;
+          const difference = handcraftHours - trailLeadingHours;
+          
+          // 只顯示有差值的人（差值不為0）
+          if (difference !== 0) {
+            differenceData.push({
+              name,
+              difference,
+              handcraftHours,
+              trailLeadingHours,
+            });
+          }
+        });
+        
+        // 按差值排序（降序）
+        differenceData.sort((a, b) => b.difference - a.difference);
+        
+        // 如果沒有數據，不顯示圖表
+        if (differenceData.length === 0) {
+          return null;
+        }
+        
+        // 根據中位數分成兩部分
+        const midIndex = Math.ceil(differenceData.length / 2);
+        const topHalf = differenceData.slice(0, midIndex);
+        const bottomHalf = differenceData.slice(midIndex);
+        
+        // 自定義 Tooltip
+        const DifferenceTooltip = ({ active, payload, label }) => {
+          if (active && payload && payload.length) {
+            const data = payload[0].payload;
+            return (
+              <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.95)' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  {label}
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#1976d2' }}>
+                  差值: {data.difference} 小時
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#8884d8' }}>
+                  手作時數: {data.handcraftHours} 小時
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#82ca9d' }}>
+                  步道實作帶領時數: {data.trailLeadingHours} 小時
+                </Typography>
+              </Paper>
+            );
+          }
+          return null;
+        };
+        
+        return (
+          <Grid item xs={12}>
+            <Paper elevation={2} sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                16. 出勤手作時數 - 回報步道實作帶領時數
+              </Typography>
+              {/* 上半部分 */}
+              <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={topHalf}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      angle={-45}
+                      textAnchor="end"
+                      height={120}
+                      interval={0}
+                    />
+                    <YAxis />
+                    <Tooltip content={<DifferenceTooltip />} />
+                    <Bar dataKey="difference">
+                      {topHalf.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+              {/* 下半部分 */}
+              {bottomHalf.length > 0 && (
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <BarChart
+                      data={bottomHalf}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={120}
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip content={<DifferenceTooltip />} />
+                      <Bar dataKey="difference">
+                        {bottomHalf.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                          />
+                        ))}
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 </Box>

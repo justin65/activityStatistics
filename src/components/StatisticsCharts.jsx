@@ -679,8 +679,16 @@ export default function StatisticsCharts({ data, hourLogData }) {
                   interval={0}
                 />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#8884d8" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {activityTypes.map((type) => (
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    stackId="a"
+                    fill={activityTypeColorMap[type]}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </Box>
@@ -699,8 +707,16 @@ export default function StatisticsCharts({ data, hourLogData }) {
                   interval={0}
                 />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#8884d8" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {activityTypes.map((type) => (
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    stackId="a"
+                    fill={activityTypeColorMap[type]}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </Box>
@@ -728,8 +744,16 @@ export default function StatisticsCharts({ data, hourLogData }) {
                   interval={0}
                 />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="hours" fill="#82ca9d" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {activityTypes.map((type) => (
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    stackId="a"
+                    fill={activityTypeColorMap[type]}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </Box>
@@ -748,8 +772,16 @@ export default function StatisticsCharts({ data, hourLogData }) {
                   interval={0}
                 />
                 <YAxis />
-                <Tooltip />
-                <Bar dataKey="hours" fill="#82ca9d" />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {activityTypes.map((type) => (
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    stackId="a"
+                    fill={activityTypeColorMap[type]}
+                  />
+                ))}
               </BarChart>
             </ResponsiveContainer>
           </Box>

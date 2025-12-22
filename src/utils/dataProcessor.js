@@ -312,14 +312,23 @@ export function calculateMonthlyCityDays(data) {
 /**
  * 計算按人名的活動參與次數（使用別名映射合併）
  * 處理名字後面有日期的情況（例如：建宇(8/23)）
+ * 按活動類型分組統計
  * @param {Array} data - 過濾後的資料
- * @returns {Array} 統計資料 [{ name: string, count: number }]
+ * @returns {Array} 統計資料 [{ name: string, [活動類型1]: number, [活動類型2]: number, ... }]
  */
 export function calculateParticipantCount(data) {
   const stats = {};
   const errors = [];
+  const activityTypesSet = new Set();
+  
+  // 先收集所有活動類型
+  data.forEach(record => {
+    const activityType = record.activityType || '未分類';
+    activityTypesSet.add(activityType);
+  });
   
   data.forEach(record => {
+    const activityType = record.activityType || '未分類';
     record.participants.forEach(participant => {
       // 處理新格式：participant 可能是 { name: string, days: number } 或 string
       let name, daysFromPrefix = 0;
@@ -353,9 +362,13 @@ export function calculateParticipantCount(data) {
       // 次數統計：每個活動記錄中的每個參與人員都只算1次
       // 日期信息只用於計算時數，不影響次數統計
       if (!stats[normalizedName]) {
-        stats[normalizedName] = 0;
+        stats[normalizedName] = {};
+        // 初始化所有活動類型為 0
+        activityTypesSet.forEach(type => {
+          stats[normalizedName][type] = 0;
+        });
       }
-      stats[normalizedName]++;
+      stats[normalizedName][activityType] = (stats[normalizedName][activityType] || 0) + 1;
     });
   });
   
@@ -365,24 +378,38 @@ export function calculateParticipantCount(data) {
     errors.forEach(error => console.error('  -', error));
   }
   
-  return Object.entries(stats)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
+  // 轉換為陣列格式，並計算總次數用於排序
+  const result = Object.entries(stats).map(([name, typeCounts]) => {
+    const total = Object.values(typeCounts).reduce((sum, count) => sum + count, 0);
+    return { name, ...typeCounts, total };
+  }).sort((a, b) => b.total - a.total);
+  
+  // 移除 total 欄位（只保留 name 和活動類型）
+  return result.map(({ total, ...rest }) => rest);
 }
 
 /**
  * 計算按人名的活動參與時數（使用別名映射合併）
  * 處理名字後面有日期的情況（例如：建宇(8/23)）
  * 如果名字中有日期，時數 = 天數 × 8小時；否則使用記錄中的時數
+ * 按活動類型分組統計
  * @param {Array} data - 過濾後的資料
- * @returns {Array} 統計資料 [{ name: string, hours: number }]
+ * @returns {Array} 統計資料 [{ name: string, [活動類型1]: number, [活動類型2]: number, ... }]
  */
 export function calculateParticipantHours(data) {
   const stats = {};
   const errors = [];
+  const activityTypesSet = new Set();
+  
+  // 先收集所有活動類型
+  data.forEach(record => {
+    const activityType = record.activityType || '未分類';
+    activityTypesSet.add(activityType);
+  });
   
   data.forEach(record => {
     const recordHours = record.hours || 0;
+    const activityType = record.activityType || '未分類';
     record.participants.forEach(participant => {
       // 處理新格式：participant 可能是 { name: string, days: number } 或 string
       let name, daysFromPrefix = 0;
@@ -428,9 +455,13 @@ export function calculateParticipantHours(data) {
       }
       
       if (!stats[normalizedName]) {
-        stats[normalizedName] = 0;
+        stats[normalizedName] = {};
+        // 初始化所有活動類型為 0
+        activityTypesSet.forEach(type => {
+          stats[normalizedName][type] = 0;
+        });
       }
-      stats[normalizedName] += hours;
+      stats[normalizedName][activityType] = (stats[normalizedName][activityType] || 0) + hours;
     });
   });
   
@@ -440,9 +471,14 @@ export function calculateParticipantHours(data) {
     errors.forEach(error => console.error('  -', error));
   }
   
-  return Object.entries(stats)
-    .map(([name, hours]) => ({ name, hours }))
-    .sort((a, b) => b.hours - a.hours);
+  // 轉換為陣列格式，並計算總時數用於排序
+  const result = Object.entries(stats).map(([name, typeHours]) => {
+    const total = Object.values(typeHours).reduce((sum, hours) => sum + hours, 0);
+    return { name, ...typeHours, total };
+  }).sort((a, b) => b.total - a.total);
+  
+  // 移除 total 欄位（只保留 name 和活動類型）
+  return result.map(({ total, ...rest }) => rest);
 }
 
 /**

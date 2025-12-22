@@ -1,46 +1,96 @@
 import React, { useRef } from 'react';
-import { Box, Button, Typography, Paper } from '@mui/material';
+import { Box, Button, Typography, Paper, Grid } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
-export default function ExcelUploader({ onFileUpload, isLoading }) {
-  const fileInputRef = useRef(null);
+export default function ExcelUploader({ 
+  onHourLogUpload, 
+  onManpowerUpload, 
+  isLoadingHourLog, 
+  isLoadingManpower 
+}) {
+  const hourLogInputRef = useRef(null);
+  const manpowerInputRef = useRef(null);
 
-  const handleFileChange = (event) => {
+  const handleHourLogChange = (event) => {
     const file = event.target.files?.[0];
     if (file) {
-      onFileUpload(file);
+      onHourLogUpload(file);
     }
   };
 
-  const handleButtonClick = () => {
-    fileInputRef.current?.click();
+  const handleManpowerChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      onManpowerUpload(file);
+    }
+  };
+
+  const handleHourLogButtonClick = () => {
+    hourLogInputRef.current?.click();
+  };
+
+  const handleManpowerButtonClick = () => {
+    manpowerInputRef.current?.click();
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 3, mb: 4 }}>
-      <Typography variant="h6" gutterBottom>
-        上傳 Excel 檔案
-      </Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
-          disabled={isLoading}
-        />
-        <Button
-          variant="contained"
-          component="span"
-          startIcon={<CloudUploadIcon />}
-          onClick={handleButtonClick}
-          disabled={isLoading}
-        >
-          {isLoading ? '處理中...' : '選擇檔案'}
-        </Button>
-      </Box>
-    </Paper>
+    <Grid container spacing={3} sx={{ mb: 4 }}>
+      {/* 人力需求表上傳（左側） */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            上傳人力需求表
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <input
+              ref={manpowerInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleManpowerChange}
+              style={{ display: 'none' }}
+              disabled={isLoadingManpower}
+            />
+            <Button
+              variant="contained"
+              component="span"
+              startIcon={<CloudUploadIcon />}
+              onClick={handleManpowerButtonClick}
+              disabled={isLoadingManpower}
+            >
+              {isLoadingManpower ? '處理中...' : '選擇檔案'}
+            </Button>
+          </Box>
+        </Paper>
+      </Grid>
+
+      {/* 時數登錄表上傳（右側） */}
+      <Grid item xs={12} md={6}>
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            上傳時數登錄表
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <input
+              ref={hourLogInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleHourLogChange}
+              style={{ display: 'none' }}
+              disabled={isLoadingHourLog}
+            />
+            <Button
+              variant="contained"
+              component="span"
+              startIcon={<CloudUploadIcon />}
+              onClick={handleHourLogButtonClick}
+              disabled={isLoadingHourLog}
+            >
+              {isLoadingHourLog ? '處理中...' : '選擇檔案'}
+            </Button>
+          </Box>
+        </Paper>
+      </Grid>
+    </Grid>
   );
 }
 

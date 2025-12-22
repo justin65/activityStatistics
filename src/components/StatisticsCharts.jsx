@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Paper, Typography, Box, Grid } from '@mui/material';
 import {
   BarChart,
@@ -32,8 +32,8 @@ import {
   getCities,
 } from '../utils/dataProcessor.js';
 
-export default function StatisticsCharts({ data }) {
-  if (!data || data.length === 0) {
+export default function StatisticsCharts({ data, hourLogData }) {
+  if ((!data || data.length === 0) && (!hourLogData || !hourLogData.data || hourLogData.data.length === 0)) {
     return (
       <Typography variant="body1" color="text.secondary" align="center" sx={{ py: 4 }}>
         請先上傳 Excel 檔案以顯示統計圖表
@@ -41,21 +41,62 @@ export default function StatisticsCharts({ data }) {
     );
   }
 
-  // 計算各種統計資料
-  const monthlyActivityTypeCount = calculateMonthlyActivityTypeCount(data);
-  const monthlyActivityTypeDays = calculateMonthlyActivityTypeDays(data);
-  const monthlyCityCount = calculateMonthlyCityCount(data);
-  const monthlyCityDays = calculateMonthlyCityDays(data);
-  const monthlyRegionCount = calculateMonthlyRegionCount(data);
-  const monthlyRegionDays = calculateMonthlyRegionDays(data);
-  const activityTypeTotalCount = calculateActivityTypeTotalCount(data);
-  const activityTypeTotalDays = calculateActivityTypeTotalDays(data);
-  const cityTotalCount = calculateCityTotalCount(data);
-  const cityTotalDays = calculateCityTotalDays(data);
-  const regionTotalCount = calculateRegionTotalCount(data);
-  const regionTotalDays = calculateRegionTotalDays(data);
-  const participantCount = calculateParticipantCount(data);
-  const participantHours = calculateParticipantHours(data);
+  // 使用 useMemo 緩存計算結果，只在 data 改變時重新計算
+  const statistics = useMemo(() => {
+    if (!data || data.length === 0) {
+      return {
+        monthlyActivityTypeCount: [],
+        monthlyActivityTypeDays: [],
+        monthlyCityCount: [],
+        monthlyCityDays: [],
+        monthlyRegionCount: [],
+        monthlyRegionDays: [],
+        activityTypeTotalCount: [],
+        activityTypeTotalDays: [],
+        cityTotalCount: [],
+        cityTotalDays: [],
+        regionTotalCount: [],
+        regionTotalDays: [],
+        participantCount: [],
+        participantHours: [],
+      };
+    }
+
+    return {
+      monthlyActivityTypeCount: calculateMonthlyActivityTypeCount(data),
+      monthlyActivityTypeDays: calculateMonthlyActivityTypeDays(data),
+      monthlyCityCount: calculateMonthlyCityCount(data),
+      monthlyCityDays: calculateMonthlyCityDays(data),
+      monthlyRegionCount: calculateMonthlyRegionCount(data),
+      monthlyRegionDays: calculateMonthlyRegionDays(data),
+      activityTypeTotalCount: calculateActivityTypeTotalCount(data),
+      activityTypeTotalDays: calculateActivityTypeTotalDays(data),
+      cityTotalCount: calculateCityTotalCount(data),
+      cityTotalDays: calculateCityTotalDays(data),
+      regionTotalCount: calculateRegionTotalCount(data),
+      regionTotalDays: calculateRegionTotalDays(data),
+      participantCount: calculateParticipantCount(data),
+      participantHours: calculateParticipantHours(data),
+    };
+  }, [data]);
+
+  // 解構統計資料
+  const {
+    monthlyActivityTypeCount,
+    monthlyActivityTypeDays,
+    monthlyCityCount,
+    monthlyCityDays,
+    monthlyRegionCount,
+    monthlyRegionDays,
+    activityTypeTotalCount,
+    activityTypeTotalDays,
+    cityTotalCount,
+    cityTotalDays,
+    regionTotalCount,
+    regionTotalDays,
+    participantCount,
+    participantHours,
+  } = statistics;
 
   // 取得所有活動類型和縣市（用於圖表）
   const activityTypes = getActivityTypes(monthlyActivityTypeCount);
@@ -704,6 +745,144 @@ export default function StatisticsCharts({ data }) {
           </Box>
         </Paper>
       </Grid>
+
+      {/* 圖表 15: 志工參與時數統計（依參與內容） */}
+      {hourLogData && hourLogData.data && hourLogData.data.length > 0 && (() => {
+        // 為參與內容建立顏色映射，確保每個內容類型都有唯一顏色
+        const getContentColorMap = (contentList) => {
+          const colorPalette = getColorPalette(contentList.length);
+          const colorMap = {};
+          contentList.forEach((content, index) => {
+            colorMap[content] = colorPalette[index];
+          });
+          return colorMap;
+        };
+        
+        const contentColorMap = getContentColorMap(hourLogData.contentTypes);
+        
+        // 計算每個志工的總時數並添加到數據中
+        const dataWithTotal = hourLogData.data.map(item => {
+          const total = Object.entries(item).reduce((sum, [key, val]) => {
+            if (key === 'name') return sum;
+            return typeof val === 'number' ? sum + val : sum;
+          }, 0);
+          return { ...item, total };
+        });
+        
+        // 按總時數排序（降序）
+        dataWithTotal.sort((a, b) => b.total - a.total);
+        
+        // 根據中位數分成兩部分
+        const midIndex = Math.ceil(dataWithTotal.length / 2);
+        const topHalf = dataWithTotal.slice(0, midIndex);
+        const bottomHalf = dataWithTotal.slice(midIndex);
+        
+        // 自定義 Tooltip，顯示總時數在人名上面，過濾掉時數為0的項目
+        const HourLogTooltip = ({ active, payload, label }) => {
+          if (active && payload && payload.length) {
+            // 計算總時數
+            const total = payload.reduce((sum, entry) => {
+              return sum + (typeof entry.value === 'number' ? entry.value : 0);
+            }, 0);
+            
+            // 過濾掉時數為0的項目
+            const filteredPayload = payload.filter(entry => 
+              typeof entry.value === 'number' && entry.value > 0
+            );
+            
+            return (
+              <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.95)' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, color: '#1976d2' }}>
+                  總時數: {total} 小時
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                  {label}
+                </Typography>
+                {filteredPayload.map((entry, index) => (
+                  <Typography
+                    key={index}
+                    variant="body2"
+                    sx={{ color: entry.color }}
+                  >
+                    {`${entry.name}: ${entry.value} 小時`}
+                  </Typography>
+                ))}
+              </Paper>
+            );
+          }
+          return null;
+        };
+        
+        return (
+          <Grid item xs={12}>
+            <Paper elevation={2} sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                15. 志工參與時數統計（依參與內容）
+              </Typography>
+              {/* 上半部分 */}
+              <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={topHalf}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      angle={-45}
+                      textAnchor="end"
+                      height={120}
+                      interval={0}
+                    />
+                    <YAxis />
+                    <Tooltip content={<HourLogTooltip />} />
+                    <Legend />
+                    {hourLogData.contentTypes.map((content) => (
+                      <Bar
+                        key={content}
+                        dataKey={content}
+                        stackId="a"
+                        fill={contentColorMap[content]}
+                      />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+              {/* 下半部分 */}
+              {bottomHalf.length > 0 && (
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <BarChart
+                      data={bottomHalf}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={120}
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip content={<HourLogTooltip />} />
+                      <Legend />
+                      {hourLogData.contentTypes.map((content) => (
+                        <Bar
+                          key={content}
+                          dataKey={content}
+                          stackId="a"
+                          fill={contentColorMap[content]}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        );
+      })()}
     </Grid>
   );
 }

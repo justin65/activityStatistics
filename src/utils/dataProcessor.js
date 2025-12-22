@@ -555,7 +555,12 @@ export function calculateCityTotalCount(data) {
   return Object.entries(stats)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => {
-      const regionA = cityRegionsForSort[a.name] || 99; // 未定義的縣市（包括未分類）放在最後
+      // 明確處理「未分類」，讓它始終排在最後
+      if (a.name === '未分類' && b.name !== '未分類') return 1;
+      if (a.name !== '未分類' && b.name === '未分類') return -1;
+      if (a.name === '未分類' && b.name === '未分類') return 0;
+      
+      const regionA = cityRegionsForSort[a.name] || 99; // 未定義的縣市放在最後（但未分類已經處理過了）
       const regionB = cityRegionsForSort[b.name] || 99;
       
       if (regionA !== regionB) {
@@ -565,7 +570,12 @@ export function calculateCityTotalCount(data) {
       // 同區域內按順序排序
       const orderA = cityOrderForSort[a.name] || 999;
       const orderB = cityOrderForSort[b.name] || 999;
-      return orderA - orderB;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // 如果都是未定義的縣市（且不是未分類），按名稱排序
+      return a.name.localeCompare(b.name, 'zh-TW');
     });
 }
 
@@ -590,7 +600,12 @@ export function calculateCityTotalDays(data) {
   return Object.entries(stats)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => {
-      const regionA = cityRegionsForSort[a.name] || 99; // 未定義的縣市（包括未分類）放在最後
+      // 明確處理「未分類」，讓它始終排在最後
+      if (a.name === '未分類' && b.name !== '未分類') return 1;
+      if (a.name !== '未分類' && b.name === '未分類') return -1;
+      if (a.name === '未分類' && b.name === '未分類') return 0;
+      
+      const regionA = cityRegionsForSort[a.name] || 99; // 未定義的縣市放在最後（但未分類已經處理過了）
       const regionB = cityRegionsForSort[b.name] || 99;
       
       if (regionA !== regionB) {
@@ -600,7 +615,12 @@ export function calculateCityTotalDays(data) {
       // 同區域內按順序排序
       const orderA = cityOrderForSort[a.name] || 999;
       const orderB = cityOrderForSort[b.name] || 999;
-      return orderA - orderB;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      // 如果都是未定義的縣市（且不是未分類），按名稱排序
+      return a.name.localeCompare(b.name, 'zh-TW');
     });
 }
 

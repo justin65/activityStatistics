@@ -128,9 +128,14 @@ export default function StatisticsCharts({ data, hourLogData }) {
     '花蓮縣': 1, '台東縣': 2,
   };
 
-  // 對縣市進行排序：先按區域（北中南東），再按區域內順序
+  // 對縣市進行排序：先按區域（北中南東），再按區域內順序，未分類放在最後
   const cities = [...citiesRaw].sort((a, b) => {
-    const regionA = cityRegions[a] || 99; // 未定義的縣市放在最後
+    // 明確處理「未分類」，讓它始終排在最後
+    if (a === '未分類' && b !== '未分類') return 1;
+    if (a !== '未分類' && b === '未分類') return -1;
+    if (a === '未分類' && b === '未分類') return 0;
+    
+    const regionA = cityRegions[a] || 99; // 未定義的縣市放在最後（但未分類已經處理過了）
     const regionB = cityRegions[b] || 99;
     
     if (regionA !== regionB) {
@@ -140,7 +145,12 @@ export default function StatisticsCharts({ data, hourLogData }) {
     // 同區域內按順序排序
     const orderA = cityOrder[a] || 999;
     const orderB = cityOrder[b] || 999;
-    return orderA - orderB;
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    
+    // 如果都是未定義的縣市（且不是未分類），按名稱排序
+    return a.localeCompare(b, 'zh-TW');
   });
 
   // 為 recharts 準備資料格式

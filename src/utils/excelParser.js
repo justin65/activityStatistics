@@ -185,13 +185,14 @@ export async function parseExcelFile(file) {
     
     try {
       // 讀取各欄位
-      // A: 日期, B: 活動名稱, C: 辦理情形, D: 天數, E: 活動類型, G: 縣市, N: 可登錄時數, Q: 服勤區
+      // A: 日期, B: 活動名稱, C: 辦理情形, D: 天數, E: 活動類型, G: 縣市, L: 志工人數, N: 可登錄時數, Q: 服勤區
       const dateValue = row.getCell('A').value;
       const activityName = row.getCell('B').value;
       const status = row.getCell('C').value;
       const daysValue = row.getCell('D').value;
       const activityType = row.getCell('E').value;
       const city = row.getCell('G').value;
+      const volunteerCountValue = row.getCell('L').value;
       const hoursValue = row.getCell('N').value;
       const participantsValue = row.getCell('Q').value;
       
@@ -208,6 +209,15 @@ export async function parseExcelFile(file) {
         const daysNum = typeof daysValue === 'number' ? daysValue : parseFloat(daysValue);
         if (!isNaN(daysNum) && daysNum > 0) {
           days = daysNum;
+        }
+      }
+      
+      // 解析志工人數
+      let volunteerCount = 0;
+      if (volunteerCountValue !== null && volunteerCountValue !== undefined) {
+        const countNum = typeof volunteerCountValue === 'number' ? volunteerCountValue : parseFloat(volunteerCountValue);
+        if (!isNaN(countNum) && countNum > 0) {
+          volunteerCount = countNum;
         }
       }
       
@@ -231,6 +241,7 @@ export async function parseExcelFile(file) {
         days,
         activityType: String(activityType || '').trim(),
         city: String(city || '').trim(),
+        volunteerCount,
         hours,
         participants, // 現在是 { name: string, days: number }[] 格式
         rowNumber,

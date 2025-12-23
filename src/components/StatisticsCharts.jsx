@@ -30,6 +30,12 @@ import {
   calculateParticipantHours,
   getActivityTypes,
   getCities,
+  calculateMonthlyVolunteerCountByType,
+  calculateCityVolunteerCountByType,
+  calculateRegionVolunteerCountByType,
+  calculateVolunteerCountByActivityType,
+  calculateVolunteerCountByRegion,
+  calculateVolunteerCountByCity,
 } from '../utils/dataProcessor.js';
 
 export default function StatisticsCharts({ data, hourLogData }) {
@@ -59,6 +65,12 @@ export default function StatisticsCharts({ data, hourLogData }) {
         regionTotalDays: [],
         participantCount: [],
         participantHours: [],
+        monthlyVolunteerCountByType: [],
+        cityVolunteerCountByType: [],
+        regionVolunteerCountByType: [],
+        volunteerCountByActivityType: [],
+        volunteerCountByRegion: [],
+        volunteerCountByCity: [],
       };
     }
 
@@ -77,6 +89,12 @@ export default function StatisticsCharts({ data, hourLogData }) {
       regionTotalDays: calculateRegionTotalDays(data),
       participantCount: calculateParticipantCount(data),
       participantHours: calculateParticipantHours(data),
+      monthlyVolunteerCountByType: calculateMonthlyVolunteerCountByType(data),
+      cityVolunteerCountByType: calculateCityVolunteerCountByType(data),
+      regionVolunteerCountByType: calculateRegionVolunteerCountByType(data),
+      volunteerCountByActivityType: calculateVolunteerCountByActivityType(data),
+      volunteerCountByRegion: calculateVolunteerCountByRegion(data),
+      volunteerCountByCity: calculateVolunteerCountByCity(data),
     };
   }, [data]);
 
@@ -96,6 +114,12 @@ export default function StatisticsCharts({ data, hourLogData }) {
     regionTotalDays,
     participantCount,
     participantHours,
+    monthlyVolunteerCountByType,
+    cityVolunteerCountByType,
+    regionVolunteerCountByType,
+    volunteerCountByActivityType,
+    volunteerCountByRegion,
+    volunteerCountByCity,
   } = statistics;
 
   // 取得所有活動類型和縣市（用於圖表）
@@ -658,11 +682,247 @@ export default function StatisticsCharts({ data, hourLogData }) {
         </Paper>
       </Grid>
 
-      {/* 圖表 13: 人名參與活動次數 */}
+      {/* 志工相關圖表 */}
+      {data && data.length > 0 && (() => {
+        // 準備數據格式
+        const monthlyVolunteerData = formatStackedData(monthlyVolunteerCountByType, activityTypes);
+        
+        // 縣市志工數據，需要按 cities 陣列的順序排序（與圖表 5 一致）
+        // 先建立一個映射，將城市數據轉換為對象
+        const cityVolunteerMap = {};
+        cityVolunteerCountByType.forEach(item => {
+          cityVolunteerMap[item.city] = item;
+        });
+        
+        // 按照 cities 陣列的順序來構建數據
+        const cityVolunteerData = cities.map(city => {
+          const item = cityVolunteerMap[city] || { city };
+          const result = { city: item.city };
+          activityTypes.forEach(type => {
+            result[type] = item[type] || 0;
+          });
+          return result;
+        });
+        
+        // 地區志工數據
+        const regionVolunteerData = regionVolunteerCountByType.map(item => {
+          const result = { region: item.region };
+          activityTypes.forEach(type => {
+            result[type] = item[type] || 0;
+          });
+          return result;
+        }).sort((a, b) => {
+          const order = { '北部': 1, '中部': 2, '南部': 3, '東部': 4, '未分類': 5 };
+          return (order[a.region] || 99) - (order[b.region] || 99);
+        });
+        
+        return (
+          <>
+            {/* 圖表 13: 志工人數統計（依月份） */}
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  13. 志工人數統計（依月份）
+                </Typography>
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={monthlyVolunteerData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="month"
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                      {activityTypes.map((type) => (
+                        <Bar
+                          key={type}
+                          dataKey={type}
+                          stackId="a"
+                          fill={activityTypeColorMap[type]}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* 圖表 14: 志工人數統計（依縣市） */}
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  14. 志工人數統計（依縣市）
+                </Typography>
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={cityVolunteerData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="city"
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                      {activityTypes.map((type) => (
+                        <Bar
+                          key={type}
+                          dataKey={type}
+                          stackId="a"
+                          fill={activityTypeColorMap[type]}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* 圖表 15: 志工人數統計（依地區） */}
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  15. 志工人數統計（依地區）
+                </Typography>
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={regionVolunteerData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="region"
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend />
+                      {activityTypes.map((type) => (
+                        <Bar
+                          key={type}
+                          dataKey={type}
+                          stackId="a"
+                          fill={activityTypeColorMap[type]}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* 圓餅圖：依活動類型、依地區、依縣市（同一行） */}
+            <Grid item xs={12} md={4}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  16. 志工人數統計（依活動類型）（總人數：{calculateTotal(volunteerCountByActivityType)}）
+                </Typography>
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                        data={volunteerCountByActivityType}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {volunteerCountByActivityType.map((entry) => {
+                          const color = activityTypeColorMap[entry.name] || '#cccccc';
+                          return <Cell key={`cell-${entry.name}`} fill={color} />;
+                        })}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  17. 志工人數統計（依地區）（總人數：{calculateTotal(volunteerCountByRegion)}）
+                </Typography>
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                        data={volunteerCountByRegion}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {volunteerCountByRegion.map((entry) => {
+                          const regionColors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#cccccc'];
+                          const colorIndex = entry.name === '未分類' ? 4 : regionsWithUnclassified.indexOf(entry.name);
+                          return <Cell key={`cell-${entry.name}`} fill={regionColors[colorIndex] || '#cccccc'} />;
+                        })}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  18. 志工人數統計（依縣市）（總人數：{calculateTotal(volunteerCountByCity)}）
+                </Typography>
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                        data={volunteerCountByCity}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={120}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {volunteerCountByCity.map((entry) => {
+                          const color = cityColorMap[entry.name] || '#cccccc';
+                          return <Cell key={`cell-${entry.name}`} fill={color} />;
+                        })}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+              </Paper>
+            </Grid>
+          </>
+        );
+      })()}
+
+      {/* 圖表 19: 人名參與活動次數 */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            13. 出勤活動次數統計
+            19. 出勤活動次數統計
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
             <ResponsiveContainer>
@@ -723,11 +983,11 @@ export default function StatisticsCharts({ data, hourLogData }) {
         </Paper>
       </Grid>
 
-      {/* 圖表 14: 人名參與活動時數 */}
+      {/* 圖表 20: 人名參與活動時數 */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            14. 出勤活動時數統計
+            20. 出勤活動時數統計
           </Typography>
           <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
             <ResponsiveContainer>
@@ -859,7 +1119,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
           <Grid item xs={12}>
             <Paper elevation={2} sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
-                15. 回報時數統計
+                21. 回報時數統計
               </Typography>
               {/* 上半部分 */}
               <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
@@ -1006,7 +1266,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
           <Grid item xs={12}>
             <Paper elevation={2} sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
-                16. 出勤手作時數 - 回報步道實作帶領時數
+                22. 出勤手作時數 - 回報步道實作帶領時數
               </Typography>
               {/* 上半部分 */}
               <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>

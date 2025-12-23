@@ -829,3 +829,242 @@ export function calculateMonthlyRegionDays(data) {
   });
 }
 
+
+/**
+ * 計算志工人數（考慮天數，0.5天也算1天）
+ * @param {number} volunteerCount - 志工人數
+ * @param {number} days - 天數
+ * @returns {number} 計算後的人數
+ */
+function calculateVolunteerPersonDays(volunteerCount, days) {
+  if (!volunteerCount || volunteerCount <= 0) return 0;
+  // 如果天數小於1，使用1；否則使用實際天數
+  const effectiveDays = days < 1 ? 1 : days;
+  return volunteerCount * effectiveDays;
+}
+
+/**
+ * 計算按月份和活動類型的志工人數統計
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料
+ */
+export function calculateMonthlyVolunteerCountByType(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const year = getYear(record.date);
+    const month = getMonth(record.date);
+    const key = `${year}-${month}`;
+    const monthLabel = formatMonth(year, month);
+    const activityType = record.activityType || '未分類';
+    const volunteerCount = record.volunteerCount || 0;
+    const days = record.days || 0;
+    
+    // 計算人數（考慮天數）
+    const personDays = calculateVolunteerPersonDays(volunteerCount, days);
+    if (personDays <= 0) return;
+    
+    if (!stats[key]) {
+      stats[key] = {
+        month: monthLabel,
+        year,
+        monthNum: month,
+      };
+    }
+    
+    if (!stats[key][activityType]) {
+      stats[key][activityType] = 0;
+    }
+    
+    stats[key][activityType] += personDays;
+  });
+  
+  return Object.values(stats).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.monthNum - b.monthNum;
+  });
+}
+
+/**
+ * 計算按縣市和活動類型的志工人數統計
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料
+ */
+export function calculateCityVolunteerCountByType(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    const activityType = record.activityType || '未分類';
+    const volunteerCount = record.volunteerCount || 0;
+    const days = record.days || 0;
+    
+    // 計算人數（考慮天數）
+    const personDays = calculateVolunteerPersonDays(volunteerCount, days);
+    if (personDays <= 0) return;
+    
+    if (!stats[city]) {
+      stats[city] = {};
+    }
+    
+    if (!stats[city][activityType]) {
+      stats[city][activityType] = 0;
+    }
+    
+    stats[city][activityType] += personDays;
+  });
+  
+  return Object.entries(stats).map(([city, typeCounts]) => ({
+    city,
+    ...typeCounts,
+  }));
+}
+
+/**
+ * 計算按地區和活動類型的志工人數統計
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料
+ */
+export function calculateRegionVolunteerCountByType(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    const region = getRegion(city);
+    const activityType = record.activityType || '未分類';
+    const volunteerCount = record.volunteerCount || 0;
+    const days = record.days || 0;
+    
+    // 計算人數（考慮天數）
+    const personDays = calculateVolunteerPersonDays(volunteerCount, days);
+    if (personDays <= 0) return;
+    
+    if (!stats[region]) {
+      stats[region] = {};
+    }
+    
+    if (!stats[region][activityType]) {
+      stats[region][activityType] = 0;
+    }
+    
+    stats[region][activityType] += personDays;
+  });
+  
+  return Object.entries(stats).map(([region, typeCounts]) => ({
+    region,
+    ...typeCounts,
+  }));
+}
+
+/**
+ * 計算依活動類型的志工人數總計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateVolunteerCountByActivityType(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const activityType = record.activityType || '未分類';
+    const volunteerCount = record.volunteerCount || 0;
+    const days = record.days || 0;
+    
+    // 計算人數（考慮天數）
+    const personDays = calculateVolunteerPersonDays(volunteerCount, days);
+    if (personDays <= 0) return;
+    
+    if (!stats[activityType]) {
+      stats[activityType] = 0;
+    }
+    
+    stats[activityType] += personDays;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+/**
+ * 計算依地區的志工人數總計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateVolunteerCountByRegion(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    const region = getRegion(city);
+    const volunteerCount = record.volunteerCount || 0;
+    const days = record.days || 0;
+    
+    // 計算人數（考慮天數）
+    const personDays = calculateVolunteerPersonDays(volunteerCount, days);
+    if (personDays <= 0) return;
+    
+    if (!stats[region]) {
+      stats[region] = 0;
+    }
+    
+    stats[region] += personDays;
+  });
+  
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => {
+      // 按照北中南東的順序排序
+      const order = { '北部': 1, '中部': 2, '南部': 3, '東部': 4, '未分類': 5 };
+      return (order[a.name] || 99) - (order[b.name] || 99);
+    });
+}
+
+/**
+ * 計算依縣市的志工人數總計（用於圓餅圖）
+ * @param {Array} data - 過濾後的資料
+ * @returns {Array} 統計資料 [{ name: string, value: number }]
+ */
+export function calculateVolunteerCountByCity(data) {
+  const stats = {};
+  
+  data.forEach(record => {
+    const city = record.city || '未分類';
+    const volunteerCount = record.volunteerCount || 0;
+    const days = record.days || 0;
+    
+    // 計算人數（考慮天數）
+    const personDays = calculateVolunteerPersonDays(volunteerCount, days);
+    if (personDays <= 0) return;
+    
+    if (!stats[city]) {
+      stats[city] = 0;
+    }
+    
+    stats[city] += personDays;
+  });
+  
+  // 按照北中南東的順序排序，未分類放在最後
+  return Object.entries(stats)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => {
+      // 明確處理「未分類」，讓它始終排在最後
+      if (a.name === '未分類' && b.name !== '未分類') return 1;
+      if (a.name !== '未分類' && b.name === '未分類') return -1;
+      if (a.name === '未分類' && b.name === '未分類') return 0;
+      
+      const regionA = cityRegionsForSort[a.name] || 99;
+      const regionB = cityRegionsForSort[b.name] || 99;
+      
+      if (regionA !== regionB) {
+        return regionA - regionB;
+      }
+      
+      const orderA = cityOrderForSort[a.name] || 999;
+      const orderB = cityOrderForSort[b.name] || 999;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      
+      return a.name.localeCompare(b.name, 'zh-TW');
+    });
+}

@@ -925,64 +925,330 @@ export default function StatisticsCharts({ data, hourLogData }) {
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            19. 出勤活動次數統計
+            19. 出勤活動次數統計（共 {participantCount.length} 位）
           </Typography>
-          <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
-            <ResponsiveContainer>
-              <BarChart
-                data={participantCount.slice(0, Math.ceil(participantCount.length / 2))}
-                margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={120}
-                  interval={0}
-                />
-                <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                {activityTypes.map((type) => (
-                  <Bar
-                    key={type}
-                    dataKey={type}
-                    stackId="a"
-                    fill={activityTypeColorMap[type]}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
-            <ResponsiveContainer>
-              <BarChart
-                data={participantCount.slice(Math.ceil(participantCount.length / 2))}
-                margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={120}
-                  interval={0}
-                />
-                <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                {activityTypes.map((type) => (
-                  <Bar
-                    key={type}
-                    dataKey={type}
-                    stackId="a"
-                    fill={activityTypeColorMap[type]}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
+          {(() => {
+            // 計算每個人的總值（所有活動類型的總和）
+            const calculateTotal = (item) => {
+              return activityTypes.reduce((sum, type) => sum + (item[type] || 0), 0);
+            };
+            
+            // 計算所有數據的總值
+            const allTotals = participantCount.map(item => calculateTotal(item)).sort((a, b) => b - a);
+            
+            // 計算分位數
+            const q75 = allTotals[Math.floor(allTotals.length * 0.25)] || 0; // 75分位數（前25%）
+            const q50 = allTotals[Math.floor(allTotals.length * 0.5)] || 0; // 中位數
+            const q25 = allTotals[Math.floor(allTotals.length * 0.75)] || 0; // 25分位數
+            
+            // 判斷是否需要分組：如果最大值是75分位數的2倍以上，則分組
+            const maxValue = allTotals[0] || 0;
+            const needsGrouping = maxValue > 0 && maxValue > q75 * 2;
+            
+            if (needsGrouping) {
+              // 分組顯示：高值組（前25%）和其餘組
+              const highValueGroup = participantCount.filter(item => calculateTotal(item) >= q75);
+              const otherGroup = participantCount.filter(item => calculateTotal(item) < q75);
+              
+              const highMax = Math.max(...highValueGroup.map(calculateTotal), 0);
+              const otherMax = Math.max(...otherGroup.map(calculateTotal), 0);
+              
+              const highDomain = [0, Math.ceil(highMax * 1.1)];
+              const otherDomain = [0, Math.ceil(otherMax * 1.1)];
+              
+              return (
+                <>
+                  {highValueGroup.length > 0 && (
+                    <>
+                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                        高值組（前 {highValueGroup.length} 位）
+                      </Typography>
+                      {highValueGroup.length <= 30 ? (
+                        // 人數不超過30，只顯示一個圖表
+                        <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                          <ResponsiveContainer>
+                            <BarChart
+                              data={highValueGroup}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis
+                                dataKey="name"
+                                angle={-45}
+                                textAnchor="end"
+                                height={120}
+                                interval={0}
+                              />
+                              <YAxis domain={highDomain} />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Legend />
+                              {activityTypes.map((type) => (
+                                <Bar
+                                  key={type}
+                                  dataKey={type}
+                                  stackId="a"
+                                  fill={activityTypeColorMap[type]}
+                                />
+                              ))}
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      ) : (
+                        // 人數超過30，分成上下兩部分
+                        <>
+                          {(() => {
+                            const highTop = highValueGroup.slice(0, Math.ceil(highValueGroup.length / 2));
+                            const highBottom = highValueGroup.slice(Math.ceil(highValueGroup.length / 2));
+                            return (
+                              <>
+                                {highTop.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={highTop}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={highDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                                {highBottom.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={highBottom}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={highDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </>
+                  )}
+                  {otherGroup.length > 0 && (
+                    <>
+                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
+                        其餘組（{otherGroup.length} 位）
+                      </Typography>
+                      {otherGroup.length <= 30 ? (
+                        // 人數不超過30，只顯示一個圖表
+                        <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                          <ResponsiveContainer>
+                            <BarChart
+                              data={otherGroup}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis
+                                dataKey="name"
+                                angle={-45}
+                                textAnchor="end"
+                                height={120}
+                                interval={0}
+                              />
+                              <YAxis domain={otherDomain} />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Legend />
+                              {activityTypes.map((type) => (
+                                <Bar
+                                  key={type}
+                                  dataKey={type}
+                                  stackId="a"
+                                  fill={activityTypeColorMap[type]}
+                                />
+                              ))}
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      ) : (
+                        // 人數超過30，分成上下兩部分
+                        <>
+                          {(() => {
+                            const otherTop = otherGroup.slice(0, Math.ceil(otherGroup.length / 2));
+                            const otherBottom = otherGroup.slice(Math.ceil(otherGroup.length / 2));
+                            return (
+                              <>
+                                {otherTop.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={otherTop}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={otherDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                                {otherBottom.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={otherBottom}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={otherDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              );
+            } else {
+              // 不需要分組，使用原來的顯示方式
+              const topHalf = participantCount.slice(0, Math.ceil(participantCount.length / 2));
+              const bottomHalf = participantCount.slice(Math.ceil(participantCount.length / 2));
+              const maxValue = Math.max(...allTotals, 0);
+              const yAxisDomain = [0, Math.ceil(maxValue * 1.1)];
+              
+              return (
+                <>
+                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={topHalf}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          interval={0}
+                        />
+                        <YAxis domain={yAxisDomain} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                        {activityTypes.map((type) => (
+                          <Bar
+                            key={type}
+                            dataKey={type}
+                            stackId="a"
+                            fill={activityTypeColorMap[type]}
+                          />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                  <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={bottomHalf}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          interval={0}
+                        />
+                        <YAxis domain={yAxisDomain} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                        {activityTypes.map((type) => (
+                          <Bar
+                            key={type}
+                            dataKey={type}
+                            stackId="a"
+                            fill={activityTypeColorMap[type]}
+                          />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </>
+              );
+            }
+          })()}
         </Paper>
       </Grid>
 
@@ -990,64 +1256,326 @@ export default function StatisticsCharts({ data, hourLogData }) {
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography variant="h6" gutterBottom>
-            20. 出勤活動時數統計
+            20. 出勤活動時數統計（共 {participantHours.length} 位）
           </Typography>
-          <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
-            <ResponsiveContainer>
-              <BarChart
-                data={participantHours.slice(0, Math.ceil(participantHours.length / 2))}
-                margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={120}
-                  interval={0}
-                />
-                <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                {activityTypes.map((type) => (
-                  <Bar
-                    key={type}
-                    dataKey={type}
-                    stackId="a"
-                    fill={activityTypeColorMap[type]}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
-          <Box sx={{ width: '100%', height: 400, mt: 2 }}>
-            <ResponsiveContainer>
-              <BarChart
-                data={participantHours.slice(Math.ceil(participantHours.length / 2))}
-                margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={120}
-                  interval={0}
-                />
-                <YAxis />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                {activityTypes.map((type) => (
-                  <Bar
-                    key={type}
-                    dataKey={type}
-                    stackId="a"
-                    fill={activityTypeColorMap[type]}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </Box>
+          {(() => {
+            // 計算每個人的總值（所有活動類型的總和）
+            const calculateTotal = (item) => {
+              return activityTypes.reduce((sum, type) => sum + (item[type] || 0), 0);
+            };
+            
+            // 計算所有數據的總值
+            const allTotals = participantHours.map(item => calculateTotal(item)).sort((a, b) => b - a);
+            
+            // 計算分位數
+            const q75 = allTotals[Math.floor(allTotals.length * 0.25)] || 0; // 75分位數（前25%）
+            const maxValue = allTotals[0] || 0;
+            const needsGrouping = maxValue > 0 && maxValue > q75 * 2;
+            
+            if (needsGrouping) {
+              // 分組顯示：高值組（前25%）和其餘組
+              const highValueGroup = participantHours.filter(item => calculateTotal(item) >= q75);
+              const otherGroup = participantHours.filter(item => calculateTotal(item) < q75);
+              
+              const highMax = Math.max(...highValueGroup.map(calculateTotal), 0);
+              const otherMax = Math.max(...otherGroup.map(calculateTotal), 0);
+              
+              const highDomain = [0, Math.ceil(highMax * 1.1)];
+              const otherDomain = [0, Math.ceil(otherMax * 1.1)];
+              
+              return (
+                <>
+                  {highValueGroup.length > 0 && (
+                    <>
+                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                        高值組（前 {highValueGroup.length} 位）
+                      </Typography>
+                      {highValueGroup.length <= 30 ? (
+                        // 人數不超過30，只顯示一個圖表
+                        <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                          <ResponsiveContainer>
+                            <BarChart
+                              data={highValueGroup}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis
+                                dataKey="name"
+                                angle={-45}
+                                textAnchor="end"
+                                height={120}
+                                interval={0}
+                              />
+                              <YAxis domain={highDomain} />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Legend />
+                              {activityTypes.map((type) => (
+                                <Bar
+                                  key={type}
+                                  dataKey={type}
+                                  stackId="a"
+                                  fill={activityTypeColorMap[type]}
+                                />
+                              ))}
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      ) : (
+                        // 人數超過30，分成上下兩部分
+                        <>
+                          {(() => {
+                            const highTop = highValueGroup.slice(0, Math.ceil(highValueGroup.length / 2));
+                            const highBottom = highValueGroup.slice(Math.ceil(highValueGroup.length / 2));
+                            return (
+                              <>
+                                {highTop.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={highTop}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={highDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                                {highBottom.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={highBottom}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={highDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </>
+                  )}
+                  {otherGroup.length > 0 && (
+                    <>
+                      <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
+                        其餘組（{otherGroup.length} 位）
+                      </Typography>
+                      {otherGroup.length <= 30 ? (
+                        // 人數不超過30，只顯示一個圖表
+                        <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                          <ResponsiveContainer>
+                            <BarChart
+                              data={otherGroup}
+                              margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis
+                                dataKey="name"
+                                angle={-45}
+                                textAnchor="end"
+                                height={120}
+                                interval={0}
+                              />
+                              <YAxis domain={otherDomain} />
+                              <Tooltip content={<CustomTooltip />} />
+                              <Legend />
+                              {activityTypes.map((type) => (
+                                <Bar
+                                  key={type}
+                                  dataKey={type}
+                                  stackId="a"
+                                  fill={activityTypeColorMap[type]}
+                                />
+                              ))}
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </Box>
+                      ) : (
+                        // 人數超過30，分成上下兩部分
+                        <>
+                          {(() => {
+                            const otherTop = otherGroup.slice(0, Math.ceil(otherGroup.length / 2));
+                            const otherBottom = otherGroup.slice(Math.ceil(otherGroup.length / 2));
+                            return (
+                              <>
+                                {otherTop.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={otherTop}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={otherDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                                {otherBottom.length > 0 && (
+                                  <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                                    <ResponsiveContainer>
+                                      <BarChart
+                                        data={otherBottom}
+                                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                      >
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis
+                                          dataKey="name"
+                                          angle={-45}
+                                          textAnchor="end"
+                                          height={120}
+                                          interval={0}
+                                        />
+                                        <YAxis domain={otherDomain} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Legend />
+                                        {activityTypes.map((type) => (
+                                          <Bar
+                                            key={type}
+                                            dataKey={type}
+                                            stackId="a"
+                                            fill={activityTypeColorMap[type]}
+                                          />
+                                        ))}
+                                      </BarChart>
+                                    </ResponsiveContainer>
+                                  </Box>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              );
+            } else {
+              // 不需要分組，使用原來的顯示方式
+              const topHalf = participantHours.slice(0, Math.ceil(participantHours.length / 2));
+              const bottomHalf = participantHours.slice(Math.ceil(participantHours.length / 2));
+              const maxValue = Math.max(...allTotals, 0);
+              const yAxisDomain = [0, Math.ceil(maxValue * 1.1)];
+              
+              return (
+                <>
+                  <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={topHalf}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          interval={0}
+                        />
+                        <YAxis domain={yAxisDomain} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                        {activityTypes.map((type) => (
+                          <Bar
+                            key={type}
+                            dataKey={type}
+                            stackId="a"
+                            fill={activityTypeColorMap[type]}
+                          />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                  <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={bottomHalf}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          interval={0}
+                        />
+                        <YAxis domain={yAxisDomain} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                        {activityTypes.map((type) => (
+                          <Bar
+                            key={type}
+                            dataKey={type}
+                            stackId="a"
+                            fill={activityTypeColorMap[type]}
+                          />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </>
+              );
+            }
+          })()}
         </Paper>
       </Grid>
         </>
@@ -1079,10 +1607,11 @@ export default function StatisticsCharts({ data, hourLogData }) {
         // 按總時數排序（降序）
         dataWithTotal.sort((a, b) => b.total - a.total);
         
-        // 根據中位數分成兩部分
-        const midIndex = Math.ceil(dataWithTotal.length / 2);
-        const topHalf = dataWithTotal.slice(0, midIndex);
-        const bottomHalf = dataWithTotal.slice(midIndex);
+        // 計算分位數
+        const allTotals = dataWithTotal.map(item => item.total).sort((a, b) => b - a);
+        const q75 = allTotals[Math.floor(allTotals.length * 0.25)] || 0; // 75分位數（前25%）
+        const maxValue = allTotals[0] || 0;
+        const needsGrouping = maxValue > 0 && maxValue > q75 * 2;
         
         // 自定義 Tooltip，顯示總時數在人名上面，過濾掉時數為0的項目
         const HourLogTooltip = ({ active, payload, label }) => {
@@ -1120,47 +1649,264 @@ export default function StatisticsCharts({ data, hourLogData }) {
           return null;
         };
         
-        return (
-          <Grid item xs={12}>
-            <Paper elevation={2} sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                21. 回報時數統計
-              </Typography>
-              {/* 上半部分 */}
-              <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
-                <ResponsiveContainer>
-                  <BarChart
-                    data={topHalf}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      angle={-45}
-                      textAnchor="end"
-                      height={120}
-                      interval={0}
-                    />
-                    <YAxis />
-                    <Tooltip content={<HourLogTooltip />} />
-                    <Legend />
-                    {hourLogData.contentTypes.map((content) => (
-                      <Bar
-                        key={content}
-                        dataKey={content}
-                        stackId="a"
-                        fill={contentColorMap[content]}
-                      />
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-              {/* 下半部分 */}
-              {bottomHalf.length > 0 && (
-                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+        if (needsGrouping) {
+          // 分組顯示：高值組（前25%）和其餘組
+          const highValueGroup = dataWithTotal.filter(item => item.total >= q75);
+          const otherGroup = dataWithTotal.filter(item => item.total < q75);
+          
+          const highMax = Math.max(...highValueGroup.map(item => item.total), 0);
+          const otherMax = Math.max(...otherGroup.map(item => item.total), 0);
+          
+          const highDomain = [0, Math.ceil(highMax * 1.1)];
+          const otherDomain = [0, Math.ceil(otherMax * 1.1)];
+          
+          return (
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  21. 回報時數統計（共 {hourLogData.data.length} 位）
+                </Typography>
+                {highValueGroup.length > 0 && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                      高值組（前 {highValueGroup.length} 位）
+                    </Typography>
+                    {highValueGroup.length <= 30 ? (
+                      // 人數不超過30，只顯示一個圖表
+                      <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                        <ResponsiveContainer>
+                          <BarChart
+                            data={highValueGroup}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="name"
+                              angle={-45}
+                              textAnchor="end"
+                              height={120}
+                              interval={0}
+                            />
+                            <YAxis domain={highDomain} />
+                            <Tooltip content={<HourLogTooltip />} />
+                            <Legend />
+                            {hourLogData.contentTypes.map((content) => (
+                              <Bar
+                                key={content}
+                                dataKey={content}
+                                stackId="a"
+                                fill={contentColorMap[content]}
+                              />
+                            ))}
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    ) : (
+                      // 人數超過30，分成上下兩部分
+                      <>
+                        {(() => {
+                          const highTop = highValueGroup.slice(0, Math.ceil(highValueGroup.length / 2));
+                          const highBottom = highValueGroup.slice(Math.ceil(highValueGroup.length / 2));
+                          return (
+                            <>
+                              {highTop.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={highTop}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={highDomain} />
+                                      <Tooltip content={<HourLogTooltip />} />
+                                      <Legend />
+                                      {hourLogData.contentTypes.map((content) => (
+                                        <Bar
+                                          key={content}
+                                          dataKey={content}
+                                          stackId="a"
+                                          fill={contentColorMap[content]}
+                                        />
+                                      ))}
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                              {highBottom.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={highBottom}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={highDomain} />
+                                      <Tooltip content={<HourLogTooltip />} />
+                                      <Legend />
+                                      {hourLogData.contentTypes.map((content) => (
+                                        <Bar
+                                          key={content}
+                                          dataKey={content}
+                                          stackId="a"
+                                          fill={contentColorMap[content]}
+                                        />
+                                      ))}
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </>
+                )}
+                {otherGroup.length > 0 && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
+                      其餘組（{otherGroup.length} 位）
+                    </Typography>
+                    {otherGroup.length <= 30 ? (
+                      // 人數不超過30，只顯示一個圖表
+                      <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                        <ResponsiveContainer>
+                          <BarChart
+                            data={otherGroup}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="name"
+                              angle={-45}
+                              textAnchor="end"
+                              height={120}
+                              interval={0}
+                            />
+                            <YAxis domain={otherDomain} />
+                            <Tooltip content={<HourLogTooltip />} />
+                            <Legend />
+                            {hourLogData.contentTypes.map((content) => (
+                              <Bar
+                                key={content}
+                                dataKey={content}
+                                stackId="a"
+                                fill={contentColorMap[content]}
+                              />
+                            ))}
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    ) : (
+                      // 人數超過30，分成上下兩部分
+                      <>
+                        {(() => {
+                          const otherTop = otherGroup.slice(0, Math.ceil(otherGroup.length / 2));
+                          const otherBottom = otherGroup.slice(Math.ceil(otherGroup.length / 2));
+                          return (
+                            <>
+                              {otherTop.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={otherTop}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={otherDomain} />
+                                      <Tooltip content={<HourLogTooltip />} />
+                                      <Legend />
+                                      {hourLogData.contentTypes.map((content) => (
+                                        <Bar
+                                          key={content}
+                                          dataKey={content}
+                                          stackId="a"
+                                          fill={contentColorMap[content]}
+                                        />
+                                      ))}
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                              {otherBottom.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={otherBottom}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={otherDomain} />
+                                      <Tooltip content={<HourLogTooltip />} />
+                                      <Legend />
+                                      {hourLogData.contentTypes.map((content) => (
+                                        <Bar
+                                          key={content}
+                                          dataKey={content}
+                                          stackId="a"
+                                          fill={contentColorMap[content]}
+                                        />
+                                      ))}
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </>
+                )}
+              </Paper>
+            </Grid>
+          );
+        } else {
+          // 不需要分組，使用原來的顯示方式
+          const midIndex = Math.ceil(dataWithTotal.length / 2);
+          const topHalf = dataWithTotal.slice(0, midIndex);
+          const bottomHalf = dataWithTotal.slice(midIndex);
+          const yAxisDomain = [0, Math.ceil(maxValue * 1.1)];
+          
+          return (
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  21. 回報時數統計（共 {hourLogData.data.length} 位）
+                </Typography>
+                {/* 上半部分 */}
+                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
                   <ResponsiveContainer>
                     <BarChart
-                      data={bottomHalf}
+                      data={topHalf}
                       margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
@@ -1171,7 +1917,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
                         height={120}
                         interval={0}
                       />
-                      <YAxis />
+                      <YAxis domain={yAxisDomain} />
                       <Tooltip content={<HourLogTooltip />} />
                       <Legend />
                       {hourLogData.contentTypes.map((content) => (
@@ -1185,10 +1931,41 @@ export default function StatisticsCharts({ data, hourLogData }) {
                     </BarChart>
                   </ResponsiveContainer>
                 </Box>
-              )}
-            </Paper>
-          </Grid>
-        );
+                {/* 下半部分 */}
+                {bottomHalf.length > 0 && (
+                  <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={bottomHalf}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          interval={0}
+                        />
+                        <YAxis domain={yAxisDomain} />
+                        <Tooltip content={<HourLogTooltip />} />
+                        <Legend />
+                        {hourLogData.contentTypes.map((content) => (
+                          <Bar
+                            key={content}
+                            dataKey={content}
+                            stackId="a"
+                            fill={contentColorMap[content]}
+                          />
+                        ))}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+          );
+        }
       })()}
 
       {/* 圖表 22: 出勤手作時數 - 回報步道實作帶領時數（需要兩個檔案） */}
@@ -1238,10 +2015,13 @@ export default function StatisticsCharts({ data, hourLogData }) {
           return null;
         }
         
-        // 根據中位數分成兩部分
-        const midIndex = Math.ceil(differenceData.length / 2);
-        const topHalf = differenceData.slice(0, midIndex);
-        const bottomHalf = differenceData.slice(midIndex);
+        const totalCount = differenceData.length; // 保存總人數
+        
+        // 計算所有差值的絕對值
+        const allAbsValues = differenceData.map(item => Math.abs(item.difference)).sort((a, b) => b - a);
+        const q75 = allAbsValues[Math.floor(allAbsValues.length * 0.25)] || 0; // 75分位數（前25%）
+        const maxAbsValue = allAbsValues[0] || 0;
+        const needsGrouping = maxAbsValue > 0 && maxAbsValue > q75 * 2;
         
         // 自定義 Tooltip
         const DifferenceTooltip = ({ active, payload, label }) => {
@@ -1267,46 +2047,312 @@ export default function StatisticsCharts({ data, hourLogData }) {
           return null;
         };
         
-        return (
-          <Grid item xs={12}>
-            <Paper elevation={2} sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                22. 出勤手作時數 - 回報步道實作帶領時數
-              </Typography>
-              {/* 上半部分 */}
-              <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
-                <ResponsiveContainer>
-                  <BarChart
-                    data={topHalf}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      angle={-45}
-                      textAnchor="end"
-                      height={120}
-                      interval={0}
-                    />
-                    <YAxis />
-                    <Tooltip content={<DifferenceTooltip />} />
-                    <Bar dataKey="difference">
-                      {topHalf.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+        if (needsGrouping) {
+          // 分組顯示：高值組（前25%）和其餘組
+          const highValueGroup = differenceData.filter(item => Math.abs(item.difference) >= q75);
+          const otherGroup = differenceData.filter(item => Math.abs(item.difference) < q75);
+          
+          // 正數和負數的scale分開計算
+          const highPositiveValues = highValueGroup.filter(item => item.difference > 0).map(item => item.difference);
+          const highNegativeValues = highValueGroup.filter(item => item.difference < 0).map(item => item.difference);
+          const highMaxPositive = highPositiveValues.length > 0 ? Math.max(...highPositiveValues) : 0;
+          const highMinNegative = highNegativeValues.length > 0 ? Math.min(...highNegativeValues) : 0;
+          const highDomain = [Math.ceil(highMinNegative * 1.1), Math.ceil(highMaxPositive * 1.1)];
+          
+          const otherPositiveValues = otherGroup.filter(item => item.difference > 0).map(item => item.difference);
+          const otherNegativeValues = otherGroup.filter(item => item.difference < 0).map(item => item.difference);
+          const otherMaxPositive = otherPositiveValues.length > 0 ? Math.max(...otherPositiveValues) : 0;
+          const otherMinNegative = otherNegativeValues.length > 0 ? Math.min(...otherNegativeValues) : 0;
+          const otherDomain = [Math.ceil(otherMinNegative * 1.1), Math.ceil(otherMaxPositive * 1.1)];
+          
+          return (
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  22. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
+                </Typography>
+                {highValueGroup.length > 0 && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                      高值組（前 {highValueGroup.length} 位）
+                    </Typography>
+                    {highValueGroup.length <= 30 ? (
+                      // 人數不超過30，只顯示一個圖表
+                      <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                        <ResponsiveContainer>
+                          <BarChart
+                            data={highValueGroup}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="name"
+                              angle={-45}
+                              textAnchor="end"
+                              height={120}
+                              interval={0}
+                            />
+                            <YAxis domain={highDomain} />
+                            <Tooltip content={<DifferenceTooltip />} />
+                            <Bar dataKey="difference">
+                              {highValueGroup.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    ) : (
+                      // 人數超過30，分成上下兩部分
+                      <>
+                        {(() => {
+                          const highTop = highValueGroup.slice(0, Math.ceil(highValueGroup.length / 2));
+                          const highBottom = highValueGroup.slice(Math.ceil(highValueGroup.length / 2));
+                          return (
+                            <>
+                              {highTop.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={highTop}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={highDomain} />
+                                      <Tooltip content={<DifferenceTooltip />} />
+                                      <Bar dataKey="difference">
+                                        {highTop.map((entry, index) => (
+                                          <Cell 
+                                            key={`cell-${index}`} 
+                                            fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                                          />
+                                        ))}
+                                      </Bar>
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                              {highBottom.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={highBottom}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={highDomain} />
+                                      <Tooltip content={<DifferenceTooltip />} />
+                                      <Bar dataKey="difference">
+                                        {highBottom.map((entry, index) => (
+                                          <Cell 
+                                            key={`cell-${index}`} 
+                                            fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                                          />
+                                        ))}
+                                      </Bar>
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </>
+                )}
+                {otherGroup.length > 0 && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
+                      其餘組（{otherGroup.length} 位）
+                    </Typography>
+                    {otherGroup.length <= 30 ? (
+                      // 人數不超過30，只顯示一個圖表
+                      <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                        <ResponsiveContainer>
+                          <BarChart
+                            data={otherGroup}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis
+                              dataKey="name"
+                              angle={-45}
+                              textAnchor="end"
+                              height={120}
+                              interval={0}
+                            />
+                            <YAxis domain={otherDomain} />
+                            <Tooltip content={<DifferenceTooltip />} />
+                            <Bar dataKey="difference">
+                              {otherGroup.map((entry, index) => (
+                                <Cell 
+                                  key={`cell-${index}`} 
+                                  fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </Box>
+                    ) : (
+                      // 人數超過30，分成上下兩部分
+                      <>
+                        {(() => {
+                          const otherTop = otherGroup.slice(0, Math.ceil(otherGroup.length / 2));
+                          const otherBottom = otherGroup.slice(Math.ceil(otherGroup.length / 2));
+                          return (
+                            <>
+                              {otherTop.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={otherTop}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={otherDomain} />
+                                      <Tooltip content={<DifferenceTooltip />} />
+                                      <Bar dataKey="difference">
+                                        {otherTop.map((entry, index) => (
+                                          <Cell 
+                                            key={`cell-${index}`} 
+                                            fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                                          />
+                                        ))}
+                                      </Bar>
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                              {otherBottom.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                                  <ResponsiveContainer>
+                                    <BarChart
+                                      data={otherBottom}
+                                      margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                                    >
+                                      <CartesianGrid strokeDasharray="3 3" />
+                                      <XAxis
+                                        dataKey="name"
+                                        angle={-45}
+                                        textAnchor="end"
+                                        height={120}
+                                        interval={0}
+                                      />
+                                      <YAxis domain={otherDomain} />
+                                      <Tooltip content={<DifferenceTooltip />} />
+                                      <Bar dataKey="difference">
+                                        {otherBottom.map((entry, index) => (
+                                          <Cell 
+                                            key={`cell-${index}`} 
+                                            fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                                          />
+                                        ))}
+                                      </Bar>
+                                    </BarChart>
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </>
+                )}
+              </Paper>
+            </Grid>
+          );
+        } else {
+          // 不需要分組，使用原來的顯示方式
+          // 正數和負數的scale分開計算
+          const positiveValues = differenceData.filter(item => item.difference > 0).map(item => item.difference);
+          const negativeValues = differenceData.filter(item => item.difference < 0).map(item => item.difference);
+          const maxPositive = positiveValues.length > 0 ? Math.max(...positiveValues) : 0;
+          const minNegative = negativeValues.length > 0 ? Math.min(...negativeValues) : 0;
+          const yAxisDomain = [Math.ceil(minNegative * 1.1), Math.ceil(maxPositive * 1.1)];
+          
+          // 如果人數小於30，只顯示一個圖表
+          if (differenceData.length < 30) {
+            return (
+              <Grid item xs={12}>
+                <Paper elevation={2} sx={{ p: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    22. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
+                  </Typography>
+                  <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={differenceData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          interval={0}
                         />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-              {/* 下半部分 */}
-              {bottomHalf.length > 0 && (
-                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                        <YAxis domain={yAxisDomain} />
+                        <Tooltip content={<DifferenceTooltip />} />
+                        <Bar dataKey="difference">
+                          {differenceData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </Paper>
+              </Grid>
+            );
+          }
+          
+          // 人數大於等於30，分成上下兩部分
+          const midIndex = Math.ceil(differenceData.length / 2);
+          const topHalf = differenceData.slice(0, midIndex);
+          const bottomHalf = differenceData.slice(midIndex);
+          
+          return (
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  22. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
+                </Typography>
+                {/* 上半部分 */}
+                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
                   <ResponsiveContainer>
                     <BarChart
-                      data={bottomHalf}
+                      data={topHalf}
                       margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
@@ -1317,10 +2363,10 @@ export default function StatisticsCharts({ data, hourLogData }) {
                         height={120}
                         interval={0}
                       />
-                      <YAxis />
+                      <YAxis domain={yAxisDomain} />
                       <Tooltip content={<DifferenceTooltip />} />
                       <Bar dataKey="difference">
-                        {bottomHalf.map((entry, index) => (
+                        {topHalf.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
                             fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
@@ -1330,10 +2376,40 @@ export default function StatisticsCharts({ data, hourLogData }) {
                     </BarChart>
                   </ResponsiveContainer>
                 </Box>
-              )}
-            </Paper>
-          </Grid>
-        );
+                {/* 下半部分 */}
+                {bottomHalf.length > 0 && (
+                  <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={bottomHalf}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={120}
+                          interval={0}
+                        />
+                        <YAxis domain={yAxisDomain} />
+                        <Tooltip content={<DifferenceTooltip />} />
+                        <Bar dataKey="difference">
+                          {bottomHalf.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.difference >= 0 ? '#1976d2' : '#dc004e'} 
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                )}
+              </Paper>
+            </Grid>
+          );
+        }
       })()}
     </Grid>
   );

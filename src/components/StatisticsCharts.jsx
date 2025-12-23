@@ -274,6 +274,9 @@ export default function StatisticsCharts({ data, hourLogData }) {
 
   return (
     <Grid container spacing={3}>
+      {/* 圖表 1-20: 需要人力需求表 */}
+      {data && data.length > 0 && (
+        <>
       {/* 圖表 1: 月份活動次數（Stack：活動類型） */}
       <Grid item xs={12}>
         <Paper elevation={2} sx={{ p: 3 }}>
@@ -1047,8 +1050,10 @@ export default function StatisticsCharts({ data, hourLogData }) {
           </Box>
         </Paper>
       </Grid>
+        </>
+      )}
 
-      {/* 圖表 15: 志工參與時數統計（依參與內容） */}
+      {/* 圖表 21: 回報時數統計（需要時數登錄表） */}
       {hourLogData && hourLogData.data && hourLogData.data.length > 0 && (() => {
         // 為參與內容建立顏色映射，確保每個內容類型都有唯一顏色
         const getContentColorMap = (contentList) => {
@@ -1186,7 +1191,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
         );
       })()}
 
-      {/* 圖表 16: 手作時數 - 步道實作帶領時數（差值統計） */}
+      {/* 圖表 22: 出勤手作時數 - 回報步道實作帶領時數（需要兩個檔案） */}
       {data && data.length > 0 && hourLogData && hourLogData.data && hourLogData.data.length > 0 && (() => {
         // 計算差值：圖表14中的「手作」時數 - 圖表15中的「步道實作帶領」時數
         const differenceData = [];

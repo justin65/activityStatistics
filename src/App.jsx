@@ -7,7 +7,7 @@ import StatisticsCharts from './components/StatisticsCharts';
 import { parseExcelFile } from './utils/excelParser';
 import { filterCancelled } from './utils/dataProcessor';
 import { parseHourLogFile } from './utils/hourLogParser';
-import { processHourLogData, calculateVolunteerHoursByContent } from './utils/hourLogProcessor';
+import { processHourLogData, calculateVolunteerHoursByContent, calculateVolunteerTotalHoursForContentType } from './utils/hourLogProcessor';
 
 const theme = createTheme({
   palette: {
@@ -74,9 +74,17 @@ function App() {
         const processedData = processHourLogData(rawData);
         
         // 計算統計資料
-        const stats = calculateVolunteerHoursByContent(processedData);
-        
-        setHourLogData(stats);
+        const stats = calculateVolunteerHoursByContent(processedData); // 預設維持 2025 年行為（圖表 21）
+        const retrainingStats = calculateVolunteerTotalHoursForContentType(processedData, {
+          contentType: '回流訓練',
+          startYear: 2023,
+          endYear: 2025,
+        });
+
+        setHourLogData({
+          ...stats,
+          retraining: retrainingStats,
+        });
       }
     } catch (err) {
       console.error('處理時數登錄表時發生錯誤:', err);

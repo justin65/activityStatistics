@@ -1,5 +1,6 @@
 import { getLastNameTwoChars, findNameByLastTwoChars } from './nameAliases.js';
 import reportType from '../../reportType.js';
+import { getYear } from './dateParser.js';
 
 /**
  * 根據參與內容匹配 reportType
@@ -82,12 +83,41 @@ export function processHourLogData(data) {
  * @returns {Array} 統計資料 [{ name: string, [參與內容1]: number, [參與內容2]: number, ... }]
  */
 export function calculateVolunteerHoursByContent(processedData) {
+  // 預設僅統計 2025 年（保留既有圖表 21 的行為）
+  return calculateVolunteerHoursByContentWithOptions(processedData, { year: 2025 });
+}
+
+/**
+ * 計算各志工依參與內容分類的時數（可指定年份篩選）
+ * - options.year: 單一年份
+ * - options.startYear / options.endYear: 年份區間（含端點）
+ * - options.years: 指定年份清單（優先於 year / startYear-endYear）
+ * @param {Array} processedData
+ * @param {Object} options
+ * @returns {{data: Array, contentTypes: Array}}
+ */
+export function calculateVolunteerHoursByContentWithOptions(processedData, options = {}) {
   const stats = {};
   // 使用 reportType 作為內容類型集合（加上「未分類」）
   const contentTypes = new Set([...reportType, '未分類']);
+  const {
+    years,
+    year,
+    startYear,
+    endYear,
+  } = options;
+
+  const yearsSet = Array.isArray(years) && years.length > 0 ? new Set(years) : null;
+  const useYearRange = typeof startYear === 'number' && typeof endYear === 'number';
+  const useSingleYear = typeof year === 'number';
   
   // 統計每個志工和參與內容的時數
   processedData.forEach(record => {
+    const recordYear = record?.date ? getYear(record.date) : 0;
+    if (yearsSet && !yearsSet.has(recordYear)) return;
+    if (!yearsSet && useYearRange && (recordYear < startYear || recordYear > endYear)) return;
+    if (!yearsSet && !useYearRange && useSingleYear && recordYear !== year) return;
+
     const name = record.standardName;
     // 使用匹配到的 reportType 或「未分類」
     const content = record.matchedContentType || '未分類';
@@ -147,4 +177,48 @@ export function calculateVolunteerHoursByContent(processedData) {
     data: result,
     contentTypes: Array.from(usedContentTypes).sort(),
   };
+}
+
+/**
+ * 計算指定參與內容分類的「總時數」（單一系列），可指定年份篩選
+ * 主要用於像「2023–2025 回流訓練時數」這類單柱狀圖。
+ * @param {Array} processedData - 處理後的時數登錄表數據
+ * @param {Object} options
+ * @param {string} options.contentType - 例如 "回流訓練"
+ * @param {number} [options.year]
+ * @param {number} [options.startYear]
+ * @param {number} [options.endYear]
+ * @param {number[]} [options.years]
+ * @returns {{data: Array<{name: string, hours: number}>, contentType?: string, year?: number, startYear?: number, endYear?: number, years?: number[]}}
+ */
+export function calculateVolunteerTotalHoursForContentType(processedData, options = {}) {
+  const { contentType, years, year, startYear, endYear } = options;
+  const yearsSet = Array.isArray(years) && years.length > 0 ? new Set(years) : null;
+  const useYearRange = typeof startYear === 'number' && typeof endYear === 'number';
+  const useSingleYear = typeof year === 'number';
+
+  const stats = {};
+
+  processedData.forEach(record => {
+    const recordYear = record?.date ? getYear(record.date) : 0;
+    if (yearsSet && !yearsSet.has(recordYear)) return;
+    if (!yearsSet && useYearRange && (recordYear < startYear || recordYear > endYear)) return;
+    if (!yearsSet && !useYearRange && useSingleYear && recordYear !== year) return;
+
+    const name = record.standardName;
+    const hours = record.hours || 0;
+    const recordContent = record.matchedContentType || '未分類';
+
+    if (!name || hours <= 0) return;
+    if (contentType && recordContent !== contentType) return;
+
+    if (!stats[name]) stats[name] = 0;
+    stats[name] += hours;
+  });
+
+  const data = Object.entries(stats)
+    .map(([name, hours]) => ({ name, hours }))
+    .sort((a, b) => b.hours - a.hours);
+
+  return { data, contentType, years, year, startYear, endYear };
 }

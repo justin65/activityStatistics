@@ -1968,7 +1968,187 @@ export default function StatisticsCharts({ data, hourLogData }) {
         }
       })()}
 
-      {/* 圖表 22: 出勤手作時數 - 回報步道實作帶領時數（需要兩個檔案） */}
+      {/* 圖表 22: 2023-2025 回流訓練時數（需要時數登錄表） */}
+      {hourLogData?.retraining?.data && hourLogData.retraining.data.length > 0 && (() => {
+        const title = `22. 2023–2025 回流訓練時數（共 ${hourLogData.retraining.data.length} 位）`;
+
+        // 排序（降序）
+        const dataWithTotal = [...hourLogData.retraining.data].sort((a, b) => (b.hours || 0) - (a.hours || 0));
+
+        // 計算分位數以判斷是否需要分組（沿用圖表 21 的策略）
+        const allTotals = dataWithTotal.map(item => item.hours || 0).sort((a, b) => b - a);
+        const q75 = allTotals[Math.floor(allTotals.length * 0.25)] || 0; // 75分位數（前25%）
+        const maxValue = allTotals[0] || 0;
+        const needsGrouping = maxValue > 0 && maxValue > q75 * 2;
+
+        const RetrainingTooltip = ({ active, payload, label }) => {
+          if (active && payload && payload.length) {
+            const hours = payload?.[0]?.value ?? 0;
+            return (
+              <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.95)' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, color: '#1976d2' }}>
+                  總時數: {hours} 小時
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                  {label}
+                </Typography>
+              </Paper>
+            );
+          }
+          return null;
+        };
+
+        const renderSingleChart = (chartData, yAxisDomain) => (
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="name"
+              angle={-45}
+              textAnchor="end"
+              height={120}
+              interval={0}
+            />
+            <YAxis domain={yAxisDomain} />
+            <Tooltip content={<RetrainingTooltip />} />
+            <Legend />
+            <Bar dataKey="hours" name="回流訓練" fill="#1976d2" />
+          </BarChart>
+        );
+
+        if (needsGrouping) {
+          const highValueGroup = dataWithTotal.filter(item => (item.hours || 0) >= q75);
+          const otherGroup = dataWithTotal.filter(item => (item.hours || 0) < q75);
+
+          const highMax = Math.max(...highValueGroup.map(item => item.hours || 0), 0);
+          const otherMax = Math.max(...otherGroup.map(item => item.hours || 0), 0);
+
+          const highDomain = [0, Math.ceil(highMax * 1.1)];
+          const otherDomain = [0, Math.ceil(otherMax * 1.1)];
+
+          return (
+            <Grid item xs={12}>
+              <Paper elevation={2} sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                  {title}
+                </Typography>
+
+                {highValueGroup.length > 0 && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'primary.main' }}>
+                      高值組（前 {highValueGroup.length} 位）
+                    </Typography>
+                    {highValueGroup.length <= 30 ? (
+                      <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                        <ResponsiveContainer>
+                          {renderSingleChart(highValueGroup, highDomain)}
+                        </ResponsiveContainer>
+                      </Box>
+                    ) : (
+                      <>
+                        {(() => {
+                          const highTop = highValueGroup.slice(0, Math.ceil(highValueGroup.length / 2));
+                          const highBottom = highValueGroup.slice(Math.ceil(highValueGroup.length / 2));
+                          return (
+                            <>
+                              {highTop.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    {renderSingleChart(highTop, highDomain)}
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                              {highBottom.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    {renderSingleChart(highBottom, highDomain)}
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </>
+                )}
+
+                {otherGroup.length > 0 && (
+                  <>
+                    <Typography variant="subtitle1" sx={{ mt: 2, mb: 1, fontWeight: 'bold', color: 'secondary.main' }}>
+                      其餘組（{otherGroup.length} 位）
+                    </Typography>
+                    {otherGroup.length <= 30 ? (
+                      <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                        <ResponsiveContainer>
+                          {renderSingleChart(otherGroup, otherDomain)}
+                        </ResponsiveContainer>
+                      </Box>
+                    ) : (
+                      <>
+                        {(() => {
+                          const otherTop = otherGroup.slice(0, Math.ceil(otherGroup.length / 2));
+                          const otherBottom = otherGroup.slice(Math.ceil(otherGroup.length / 2));
+                          return (
+                            <>
+                              {otherTop.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                                  <ResponsiveContainer>
+                                    {renderSingleChart(otherTop, otherDomain)}
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                              {otherBottom.length > 0 && (
+                                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                                  <ResponsiveContainer>
+                                    {renderSingleChart(otherBottom, otherDomain)}
+                                  </ResponsiveContainer>
+                                </Box>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </>
+                )}
+              </Paper>
+            </Grid>
+          );
+        }
+
+        // 不需要分組，分成上下兩半（沿用圖表 21 的方式）
+        const midIndex = Math.ceil(dataWithTotal.length / 2);
+        const topHalf = dataWithTotal.slice(0, midIndex);
+        const bottomHalf = dataWithTotal.slice(midIndex);
+        const yAxisDomain = [0, Math.ceil(maxValue * 1.1)];
+
+        return (
+          <Grid item xs={12}>
+            <Paper elevation={2} sx={{ p: 3 }}>
+              <Typography variant="h6" gutterBottom>
+                {title}
+              </Typography>
+              <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>
+                <ResponsiveContainer>
+                  {renderSingleChart(topHalf, yAxisDomain)}
+                </ResponsiveContainer>
+              </Box>
+              {bottomHalf.length > 0 && (
+                <Box sx={{ width: '100%', height: 400, mt: 2 }}>
+                  <ResponsiveContainer>
+                    {renderSingleChart(bottomHalf, yAxisDomain)}
+                  </ResponsiveContainer>
+                </Box>
+              )}
+            </Paper>
+          </Grid>
+        );
+      })()}
+
+      {/* 圖表 23: 出勤手作時數 - 回報步道實作帶領時數（需要兩個檔案） */}
       {data && data.length > 0 && hourLogData && hourLogData.data && hourLogData.data.length > 0 && (() => {
         // 計算差值：圖表14中的「手作」時數 - 圖表15中的「步道實作帶領」時數
         const differenceData = [];
@@ -2069,7 +2249,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
             <Grid item xs={12}>
               <Paper elevation={2} sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  22. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
+                  23. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
                 </Typography>
                 {highValueGroup.length > 0 && (
                   <>
@@ -2303,7 +2483,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
               <Grid item xs={12}>
                 <Paper elevation={2} sx={{ p: 3 }}>
                   <Typography variant="h6" gutterBottom>
-                    22. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
+                    23. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
                   </Typography>
                   <Box sx={{ width: '100%', height: 400, mt: 2 }}>
                     <ResponsiveContainer>
@@ -2346,7 +2526,7 @@ export default function StatisticsCharts({ data, hourLogData }) {
             <Grid item xs={12}>
               <Paper elevation={2} sx={{ p: 3 }}>
                 <Typography variant="h6" gutterBottom>
-                  22. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
+                  23. 出勤手作時數 - 回報步道實作帶領時數（共 {totalCount} 位）
                 </Typography>
                 {/* 上半部分 */}
                 <Box sx={{ width: '100%', height: 400, mt: 2, mb: 4 }}>

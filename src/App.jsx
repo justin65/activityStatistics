@@ -7,7 +7,7 @@ import StatisticsCharts from './components/StatisticsCharts';
 import { parseExcelFile } from './utils/excelParser';
 import { filterCancelled } from './utils/dataProcessor';
 import { parseHourLogFile } from './utils/hourLogParser';
-import { processHourLogData, calculateVolunteerHoursByContent, calculateVolunteerTotalHoursForContentType } from './utils/hourLogProcessor';
+import { processHourLogData, calculateVolunteerHoursByContent, calculateVolunteerHoursForContentTypeByYear } from './utils/hourLogProcessor';
 import { exportCurrentChartsToExcel } from './utils/chartExcelExporter.js';
 
 const theme = createTheme({
@@ -77,7 +77,7 @@ function App() {
         
         // 計算統計資料
         const stats = calculateVolunteerHoursByContent(processedData); // 預設維持 2025 年行為（圖表 21）
-        const retrainingStats = calculateVolunteerTotalHoursForContentType(processedData, {
+        const retrainingStats = calculateVolunteerHoursForContentTypeByYear(processedData, {
           contentType: '回流訓練',
           startYear: 2023,
           endYear: 2025,

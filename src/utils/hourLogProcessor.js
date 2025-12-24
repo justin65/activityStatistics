@@ -222,3 +222,57 @@ export function calculateVolunteerTotalHoursForContentType(processedData, option
 
   return { data, contentType, years, year, startYear, endYear };
 }
+
+/**
+ * 計算指定參與內容分類的「各年份時數」（用年份做 stack），並回傳每人每年的時數
+ * 主要用於像「2023–2025 回流訓練時數（年份 stack）」這類圖表。
+ * @param {Array} processedData - 處理後的時數登錄表數據
+ * @param {Object} options
+ * @param {string} options.contentType - 例如 "回流訓練"
+ * @param {number} options.startYear
+ * @param {number} options.endYear
+ * @returns {{data: Array<Object>, years: number[], contentType: string, startYear: number, endYear: number}}
+ */
+export function calculateVolunteerHoursForContentTypeByYear(processedData, options = {}) {
+  const { contentType, startYear, endYear } = options;
+  const years = [];
+  if (typeof startYear === 'number' && typeof endYear === 'number') {
+    for (let y = startYear; y <= endYear; y++) years.push(y);
+  }
+  const yearsSet = new Set(years);
+
+  const stats = {};
+
+  processedData.forEach(record => {
+    const recordYear = record?.date ? getYear(record.date) : 0;
+    if (years.length > 0 && !yearsSet.has(recordYear)) return;
+
+    const name = record.standardName;
+    const hours = record.hours || 0;
+    const recordContent = record.matchedContentType || '未分類';
+
+    if (!name || hours <= 0) return;
+    if (contentType && recordContent !== contentType) return;
+
+    if (!stats[name]) {
+      stats[name] = {};
+      years.forEach(y => {
+        stats[name][String(y)] = 0;
+      });
+    }
+
+    const key = String(recordYear);
+    if (stats[name][key] === undefined) stats[name][key] = 0;
+    stats[name][key] += hours;
+  });
+
+  const data = Object.entries(stats)
+    .map(([name, yearHours]) => ({ name, ...yearHours }))
+    .sort((a, b) => {
+      const totalA = Object.entries(a).reduce((sum, [k, v]) => (k === 'name' ? sum : sum + (typeof v === 'number' ? v : 0)), 0);
+      const totalB = Object.entries(b).reduce((sum, [k, v]) => (k === 'name' ? sum : sum + (typeof v === 'number' ? v : 0)), 0);
+      return totalB - totalA;
+    });
+
+  return { data, years, contentType, startYear, endYear };
+}

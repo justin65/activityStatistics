@@ -1972,26 +1972,46 @@ export default function StatisticsCharts({ data, hourLogData }) {
       {hourLogData?.retraining?.data && hourLogData.retraining.data.length > 0 && (() => {
         const title = `22. 2023–2025 回流訓練時數（共 ${hourLogData.retraining.data.length} 位）`;
 
-        // 排序（降序）
-        const dataWithTotal = [...hourLogData.retraining.data].sort((a, b) => (b.hours || 0) - (a.hours || 0));
+        const yearKeys = (hourLogData?.retraining?.years && hourLogData.retraining.years.length > 0)
+          ? hourLogData.retraining.years.map(y => String(y))
+          : ['2023', '2024', '2025'];
+
+        // 計算每個人的總時數並排序（降序）
+        const dataWithTotal = hourLogData.retraining.data
+          .map(item => {
+            const total = yearKeys.reduce((sum, y) => sum + (typeof item?.[y] === 'number' ? item[y] : 0), 0);
+            return { ...item, total };
+          })
+          .sort((a, b) => (b.total || 0) - (a.total || 0));
 
         // 計算分位數以判斷是否需要分組（沿用圖表 21 的策略）
-        const allTotals = dataWithTotal.map(item => item.hours || 0).sort((a, b) => b - a);
+        const allTotals = dataWithTotal.map(item => item.total || 0).sort((a, b) => b - a);
         const q75 = allTotals[Math.floor(allTotals.length * 0.25)] || 0; // 75分位數（前25%）
         const maxValue = allTotals[0] || 0;
         const needsGrouping = maxValue > 0 && maxValue > q75 * 2;
 
         const RetrainingTooltip = ({ active, payload, label }) => {
           if (active && payload && payload.length) {
-            const hours = payload?.[0]?.value ?? 0;
+            const total = payload.reduce((sum, entry) => sum + (typeof entry.value === 'number' ? entry.value : 0), 0);
             return (
               <Paper sx={{ p: 1.5, bgcolor: 'rgba(255, 255, 255, 0.95)' }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, color: '#1976d2' }}>
-                  總時數: {hours} 小時
+                  總時數: {total} 小時
                 </Typography>
                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                   {label}
                 </Typography>
+                {payload
+                  .filter(entry => typeof entry.value === 'number' && entry.value > 0)
+                  .map((entry, index) => (
+                    <Typography
+                      key={index}
+                      variant="body2"
+                      sx={{ color: entry.color }}
+                    >
+                      {`${entry.name}: ${entry.value} 小時`}
+                    </Typography>
+                  ))}
               </Paper>
             );
           }
@@ -2014,16 +2034,25 @@ export default function StatisticsCharts({ data, hourLogData }) {
             <YAxis domain={yAxisDomain} />
             <Tooltip content={<RetrainingTooltip />} />
             <Legend />
-            <Bar dataKey="hours" name="回流訓練" fill="#1976d2" />
+            {yearKeys.map((y, idx) => (
+              <Bar
+                key={y}
+                dataKey={y}
+                name={y}
+                stackId="a"
+                fill={['#1976d2', '#82ca9d', '#ffc658', '#8884d8', '#ff7300'][idx % 5]}
+              />
+            ))}
           </BarChart>
         );
 
         if (needsGrouping) {
-          const highValueGroup = dataWithTotal.filter(item => (item.hours || 0) >= q75);
-          const otherGroup = dataWithTotal.filter(item => (item.hours || 0) < q75);
+          const highValueGroup = dataWithTotal.filter(item => (item.total || 0) >= q75);
+          const otherGroup = dataWithTotal.filter(item => (item.total || 0) < q75);
 
-          const highMax = Math.max(...highValueGroup.map(item => item.hours || 0), 0);
-          const otherMax = Math.max(...otherGroup.map(item => item.hours || 0), 0);
+          const calcTotal = (item) => yearKeys.reduce((sum, y) => sum + (typeof item?.[y] === 'number' ? item[y] : 0), 0);
+          const highMax = Math.max(...highValueGroup.map(calcTotal), 0);
+          const otherMax = Math.max(...otherGroup.map(calcTotal), 0);
 
           const highDomain = [0, Math.ceil(highMax * 1.1)];
           const otherDomain = [0, Math.ceil(otherMax * 1.1)];

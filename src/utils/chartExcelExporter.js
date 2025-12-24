@@ -93,7 +93,7 @@ function autoFitColumns(worksheet) {
   });
 }
 
-function addStackedBarSheet(workbook, sheetName, xHeader, xKey, rows, seriesKeys) {
+function addStackedBarSheet(workbook, sheetName, xHeader, xKey, rows, seriesKeys, options = {}) {
   const ws = workbook.addWorksheet(String(sheetName));
   const header = [xHeader, ...seriesKeys, '總和'];
   ws.addRow(header);
@@ -104,6 +104,13 @@ function addStackedBarSheet(workbook, sheetName, xHeader, xKey, rows, seriesKeys
     const total = values.reduce((sum, v) => sum + v, 0);
     ws.addRow([r[xKey], ...values, total]);
   });
+
+  if (options.addTotalRow) {
+    const totals = seriesKeys.map((k) => rows.reduce((sum, r) => sum + safeNumber(r[k]), 0));
+    const grandTotal = totals.reduce((sum, v) => sum + v, 0);
+    ws.addRow(['總和', ...totals, grandTotal]);
+    ws.getRow(ws.rowCount).font = { bold: true };
+  }
 
   ws.views = [{ state: 'frozen', ySplit: 1 }];
   autoFitColumns(ws);
@@ -363,13 +370,17 @@ export async function exportCurrentChartsToExcel({ data, hourLogData }) {
 
     // 22：回流訓練（單一系列）
     if (hourLogData?.retraining?.data && hourLogData.retraining.data.length > 0) {
+      const years = hourLogData?.retraining?.years && hourLogData.retraining.years.length > 0
+        ? hourLogData.retraining.years.map(y => String(y))
+        : ['2023', '2024', '2025'];
       addStackedBarSheet(
         workbook,
         22,
         '人名',
         'name',
-        hourLogData.retraining.data.map(r => ({ name: r.name, '回流訓練': safeNumber(r.hours) })),
-        ['回流訓練']
+        normalizeStackedRows(hourLogData.retraining.data, 'name', years),
+        years,
+        { addTotalRow: true }
       );
     }
   }

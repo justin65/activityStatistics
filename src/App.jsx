@@ -8,6 +8,7 @@ import { parseExcelFile } from './utils/excelParser';
 import { filterCancelled } from './utils/dataProcessor';
 import { parseHourLogFile } from './utils/hourLogParser';
 import { processHourLogData, calculateVolunteerHoursByContent, calculateVolunteerTotalHoursForContentType } from './utils/hourLogProcessor';
+import { exportCurrentChartsToExcel } from './utils/chartExcelExporter.js';
 
 const theme = createTheme({
   palette: {
@@ -28,6 +29,7 @@ function App() {
   const [hourLogData, setHourLogData] = useState(null);
   const [loadingHourLog, setLoadingHourLog] = useState(false);
   const [errorHourLog, setErrorHourLog] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   const handleManpowerUpload = async (file) => {
     setLoading(true);
@@ -94,6 +96,19 @@ function App() {
     }
   };
 
+  const handleDownload = async () => {
+    try {
+      setExporting(true);
+      await exportCurrentChartsToExcel({ data, hourLogData });
+    } catch (err) {
+      console.error('匯出 Excel 失敗:', err);
+      // 直接沿用現有錯誤顯示區塊（避免再做新的 UI）
+      setErrorHourLog(err?.message || '匯出 Excel 失敗');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -107,6 +122,9 @@ function App() {
           onManpowerUpload={handleManpowerUpload}
           isLoadingHourLog={loadingHourLog}
           isLoadingManpower={loading}
+          onDownload={handleDownload}
+          isDownloadDisabled={(loading || loadingHourLog) || (data.length === 0 && !hourLogData)}
+          isDownloading={exporting}
         />
 
         {(loading || loadingHourLog) && (

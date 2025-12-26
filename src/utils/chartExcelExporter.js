@@ -137,6 +137,19 @@ function addPieSheet(workbook, sheetName, categoryHeader, data) {
   autoFitColumns(ws);
 }
 
+function addTableSheet(workbook, sheetName, headers, rows) {
+  const ws = workbook.addWorksheet(String(sheetName));
+  ws.addRow(headers);
+  ws.getRow(1).font = { bold: true };
+
+  rows.forEach((r) => {
+    ws.addRow(r);
+  });
+
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+  autoFitColumns(ws);
+}
+
 function normalizeStackedRows(rows, xKey, seriesKeys) {
   return rows.map((r) => {
     const out = { ...r };
@@ -405,12 +418,23 @@ export async function exportCurrentChartsToExcel({ data, hourLogData }) {
       const trailLeadingHours = hourLogMap[name] || 0;
       const difference = handcraftHours - trailLeadingHours;
       if (difference !== 0) {
-        differenceRows.push({ name, 差值: difference });
+        differenceRows.push({
+          name,
+          handcraftHours,
+          trailLeadingHours,
+          difference,
+        });
       }
     });
-    differenceRows.sort((a, b) => safeNumber(b.差值) - safeNumber(a.差值));
+    differenceRows.sort((a, b) => safeNumber(b.difference) - safeNumber(a.difference));
     if (differenceRows.length > 0) {
-      addStackedBarSheet(workbook, 23, '人名', 'name', differenceRows, ['差值']);
+      // 依需求：23 不需要「總和」欄，改輸出明細欄位（與圖表 tooltip 一致）
+      addTableSheet(
+        workbook,
+        23,
+        ['人名', '出勤手作時數', '回報步道實作帶領時數', '差值'],
+        differenceRows.map(r => [r.name, r.handcraftHours, r.trailLeadingHours, r.difference])
+      );
     }
   }
 

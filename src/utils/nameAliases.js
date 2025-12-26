@@ -64,11 +64,17 @@ export function findNameByLastTwoChars(lastTwoChars) {
   if (!lastTwoChars || lastTwoChars.length === 0) return null;
   
   const map = getAliasMap();
-  
-  // 遍歷映射表，查找值（標準名稱）的最後兩個字元匹配的項目
+
+  // 最常見情境：映射表直接以「最後兩字」作為 key
+  // 例如："彥甫": "小侯"
+  if (map[lastTwoChars]) {
+    return map[lastTwoChars];
+  }
+
+  // 否則：允許 key 是更完整的名字（例如：王彥甫 -> 小侯），用 key 的最後兩字來比對
   for (const [key, value] of Object.entries(map)) {
-    const valueLastTwo = getLastNameTwoChars(value);
-    if (valueLastTwo === lastTwoChars) {
+    const keyLastTwo = getLastNameTwoChars(key);
+    if (keyLastTwo === lastTwoChars) {
       return value; // 返回標準名稱
     }
   }

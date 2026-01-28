@@ -2226,11 +2226,11 @@ export default function StatisticsCharts({ data, hourLogData }) {
         
         const totalCount = differenceData.length; // 保存總人數
         
-        // 計算所有差值的絕對值
+        // 計算所有差值的絕對值（用於判斷是否需要分組）
         const allAbsValues = differenceData.map(item => Math.abs(item.difference)).sort((a, b) => b - a);
-        const q75 = allAbsValues[Math.floor(allAbsValues.length * 0.25)] || 0; // 75分位數（前25%）
+        const q75Abs = allAbsValues[Math.floor(allAbsValues.length * 0.25)] || 0; // 75分位數（前25%）
         const maxAbsValue = allAbsValues[0] || 0;
-        const needsGrouping = maxAbsValue > 0 && maxAbsValue > q75 * 2;
+        const needsGrouping = maxAbsValue > 0 && maxAbsValue > q75Abs * 2;
         
         // 自定義 Tooltip
         const DifferenceTooltip = ({ active, payload, label }) => {
@@ -2258,8 +2258,10 @@ export default function StatisticsCharts({ data, hourLogData }) {
         
         if (needsGrouping) {
           // 分組顯示：高值組（前25%）和其餘組
-          const highValueGroup = differenceData.filter(item => Math.abs(item.difference) >= q75);
-          const otherGroup = differenceData.filter(item => Math.abs(item.difference) < q75);
+          // 修正：應該按照差值排序後的前25%來分組，而不是基於絕對值
+          const highValueCount = Math.max(1, Math.floor(differenceData.length * 0.25)); // 前25%的人數
+          const highValueGroup = differenceData.slice(0, highValueCount); // 取前25%
+          const otherGroup = differenceData.slice(highValueCount); // 剩下的75%
           
           // 正數和負數的scale分開計算
           const highPositiveValues = highValueGroup.filter(item => item.difference > 0).map(item => item.difference);
